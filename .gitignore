@@ -1,1 +1,4 @@
 /.gradle/
+_Consts.java
+*.class
+
