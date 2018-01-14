@@ -1,24 +1,391 @@
 import org.telegram.telegrambots.api.methods.send.SendMessage;
+import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
+import org.telegram.telegrambots.api.objects.replykeyboard.ForceReplyKeyboard;
+import org.telegram.telegrambots.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.api.objects.replykeyboard.ReplyKeyboardRemove;
+import org.telegram.telegrambots.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
+import com.google.common.base.Preconditions;
+
+import java.util.logging.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.DayOfWeek;
+
+import java.util.*;
+
 public class UniStudyBot extends TelegramLongPollingBot
 {   
+    private Logger logger = Logger.getLogger(UniStudyBot.class.getName());
+    
+    private static final int START_STATE = 0;
+    private static final int MAIN_MENU = 1;
+    // Course Settings BEGIN
+    private static final int COURSE_SETTINGS = 2;
+    private static final int ADD_COURSE = 3;
+    private static final int ADD_TIME = 4;
+    private static final int ADDING_TIME = 5;
+    private static final int DELETE_COURSE = 6;
+    private static final int DELETING_COURSE = 7;
+    // Course Settings END
+    private static final int GENERATE_NEW_SCHEDULE = 8;
+    
+    public String getStateFromInt(int state) {
+        String result = "";
+        switch(state) {
+            case 0:
+                result = "START_STATE";
+                break;
+            case 1:
+                result = "MAIN_MENU";
+                break;
+            case 2:
+                result = "COURSE_SETTINGS";
+                break;
+            case 3:
+                result = "ADD_COURSE";
+                break;   
+            case 4:
+                result = "ADD_TIME";
+                break;
+            case 5:
+                result = "ADDING_TIME";
+                break;
+            case 6:
+                result = "DELETE_COURSE";
+                break;
+            case 7:
+                result = "DELETING_COURSE";
+                break;       
+            case 8:
+                result = "GENERATE_NEW_SCHEDULE";
+                break;
+        }
+        return result;
+    }
+    
+    private SendMessage onCommandReceived(Message message) {
+        SendMessage sendMessage = null;
+        switch(message.getText())
+        {
+            case "/menu":
+                sendMessage = menuSelected(message);
+                break;
+            case "/start":
+                sendMessage = defaultSelected(message);
+                break;
+            default:
+                sendMessage = null;
+                break;
+        }
+        return sendMessage;
+    }
+    
+    /* State Pattern */
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
-            Database.getInstance().addUser(update.getMessage().getFrom().getUserName());
+            Message message = update.getMessage();
+            // Inserting user to database or updating his info
+            Database.getInstance().addUser(message.getFrom().getId());
             
-            SendMessage message = new SendMessage() 
-                    .setChatId(update.getMessage().getChatId())
-                    .setText(update.getMessage().getText());
+            System.out.println(message.getText()); // DEBUG ONLY
+            
+            // If a command received
+            SendMessage sendMessage = onCommandReceived(message);
+            if(sendMessage != null) {
+                try{
+                    sendMessage.setChatId(update.getMessage().getChatId());
+                    execute(sendMessage);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                } 
+                return;
+            }
+            
+            // Getting user's current state
+            final int state = Database.getInstance().getState(message.getFrom().getId(), message.getChatId());
+            System.out.println(getStateFromInt(state)); // DEBUG ONLY
+                                                
+            switch(state) {
+                case MAIN_MENU:
+                    sendMessage = onMainMenu(message);
+                    break;
+                case COURSE_SETTINGS:
+                    sendMessage = onCourseSettings(message);
+                    break;
+                case ADD_COURSE:
+                    sendMessage = onAddCourse(message);
+                    break;
+                case ADD_TIME:
+                    sendMessage = onAddTime(message);
+                    break;
+                case ADDING_TIME:
+                    sendMessage = onAddingTime(message);
+                    break;
+                default:
+                    sendMessage = onDefault(message);
+                    break;
+            }
+                    
             try {
-                execute(message); 
+                if(sendMessage == null) {
+                    sendMessage = new SendMessage();
+                    sendMessage.setText("Unknown option");
+                }
+                sendMessage.setChatId(update.getMessage().getChatId());
+                execute(sendMessage); 
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
+            
         }
+    }
+    
+    private SendMessage onDefault(Message message) {
+        if(message.getText().equals("/menu")) {
+            return menuSelected(message);
+        } else {
+            return defaultSelected(message);
+        }
+    }
+    
+    private SendMessage onMainMenu(Message message) {
+        if(message.getText().equals("/course_settings")) {
+            return courseSettingsSelected(message);
+        }
+        else if(message.getText().equals("/generate_new_schedule")) {
+            return generateNewScheduleSelected(message); // TODO
+        }
+        else if(message.getText().equals("/view_courses")) {
+            // TODO
+        }
+        return menuSelected(message);
+    }
+    
+    private SendMessage onCourseSettings(Message message) {
+        if(message.getText().equals("/add_course")) {
+            return addCourseSelected(message);
+        } else if(message.getText().equals("/delete_course")) {
+            return deleteCourseSelected(message); // TODO
+        } else if(message.getText().equals("/cancel")) {
+            return menuSelected(message);
+        }
+        return courseSettingsSelected(message);
+    }
+    
+    private List<String> splitInputAddEmptyStrings(Message message, int emptyStringsNum) {
+        Splitter splitter = Splitter.on(',').trimResults();
+        List<String> strings = Lists.newArrayList((splitter.splitToList(message.getText())));
+        List<String> emptyStrings = new ArrayList<>();
+        for(int i = 0; i < emptyStringsNum; i++) {
+            emptyStrings.add("");
+        }
+        strings.addAll(emptyStrings);
+        return strings;
+    }
+    
+    // TODO make courseName case-insensitive
+    private SendMessage onAddCourse(Message message) {
+        if(message.getText().equals("/cancel")) {
+            return courseSettingsSelected(message);
+        }
+        try {
+            List<String> strings = splitInputAddEmptyStrings(message, 4);
+            String name = strings.get(0);
+            int credits = Integer.parseInt(strings.get(1));
+            Preconditions.checkArgument(! name.equals("") && name != null);
+            Preconditions.checkArgument(credits > 0 && credits < 100);
+            String professor = strings.get(2).equals("") ? null : strings.get(2);
+            String room = strings.get(3).equals("") ? null : strings.get(3);
+            Database.getInstance().addCourse(message.getFrom().getId(), name, credits, professor, room);
+            // TODO Maybe setReplyToMessageId is not necessary
+            return addTimeSelected(message, name).setText(name + " was successfully added");
+        } catch(IllegalArgumentException e) {
+            logger.log(Level.INFO, "This message was passed: " + message.getText() + "\nFrom user: " + message.getFrom().getId(), e);
+            return addCourseSelected(message);
+        }
+        catch(Exception e) {
+            logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
+        }
+        // If something goes unexpected
+        return courseSettingsSelected(message); 
+    }
+    
+    private SendMessage onAddingTime(Message message) {
+        if(message.getText().equals("/cancel")) {
+            return courseSettingsSelected(message);
+        }
+        SendMessage sendMessage = new SendMessage();
+        Message reply = message.getReplyToMessage();
+        System.out.println(reply.getText()); // DEBUG ONLY
+        String courseName = null;
+        try {
+            // TODO change to regular expressions
+            courseName = reply.getText().split("\n")[0];
+            courseName = courseName.split(": ")[1];
+            Preconditions.checkNotNull(courseName);
+            Preconditions.checkArgument(! courseName.equals(""));
+            System.out.println(courseName); // DEBUG ONLY
+        } catch (Exception e) {
+            return courseSettingsSelected(message);
+        }
+        try {
+            List<String> strings = splitInputAddEmptyStrings(message, 3);
+            DayOfWeek.valueOf(strings.get(0).toUpperCase());
+            //DateFormat dateFormat = new SimpleDateFormat("H:mm");
+            //Date dateStart = dateFormat.parse(strings.get(1));
+            //Date dateEnd = dateFormat.parse(strings.get(2));
+            // TODO add Preconditions checking; add format of the strings checking
+            // TODO check if startTime < endTime
+            String startTime = strings.get(1) + ":00";
+            String endTime = strings.get(2) + ":00";
+            System.out.println(startTime + " - " + endTime);
+            Database.getInstance().addTime(message.getFrom().getId(), courseName, strings.get(0), startTime, endTime);
+            return addTimeSelected(message, courseName).setText("Time was successfully added");
+        } catch (IllegalArgumentException | NullPointerException e) {
+            ForceReplyKeyboard forceReplyKeyboard = new ForceReplyKeyboard();
+            sendMessage.setText(reply.getText() + "\n\nIncorrect format").setReplyMarkup(forceReplyKeyboard);
+            // sendMessage.setText("Incorrect format\nEnter again or /cancel");
+            return sendMessage;
+        } 
+        catch (Exception e) {
+            logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
+        }
+        return courseSettingsSelected(message);
+    }
+    
+    /* /add_time courseName */
+    private SendMessage onAddTime(Message message) { 
+        if(message.getText().split(" ")[0].equals("/add_time")) {
+            return addingTimeSelected(message);
+        } else if(message.getText().equals("/cancel")) {
+            return menuSelected(message);
+        }
+        return null;
+    }
+    
+    private SendMessage addingTimeSelected(Message message) {
+        Splitter splitter = Splitter.on(' ').trimResults();
+        SendMessage sendMessage = new SendMessage();
+        String courseName = null;
+        try{
+            courseName = splitter.splitToList(message.getText()).get(1);
+            Preconditions.checkNotNull(courseName);
+            Preconditions.checkArgument(! courseName.equals("") && Database.getInstance().existsCourseName(message.getFrom().getId(), courseName));
+        } catch(IndexOutOfBoundsException | IllegalArgumentException | NullPointerException e) {
+            sendMessage.setText("Incorrect format, should be /add_time <COURSE_NAME>");
+            Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), MAIN_MENU);
+            return sendMessage;
+        }
+        ForceReplyKeyboard forceReplyKeyboard = new ForceReplyKeyboard();
+        sendMessage.setText("You are adding time to course: " + courseName + "\n"
+                + "Enter the time in the format: DAY,START_TIME,END_TIME\n"
+                + "Required fields: DAY,START_TIME,END_TIME\n"
+                + "Example: Monday,13:00,14:15\n"
+                + "Or write /cancel to go to previous menu").setReplyMarkup(forceReplyKeyboard);
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADDING_TIME);
+        return sendMessage;
+    }
+    
+    private SendMessage addTimeSelected(Message message, String courseName) {
+        SendMessage sendMessage = new SendMessage();
+        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
+        replyMarkup.setOneTimeKeyboard(true);
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        KeyboardRow keyboardRow = new KeyboardRow();
+        keyboardRow.add("/add_time " + courseName);
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/cancel");
+        keyboardRows.add(keyboardRow);
+        replyMarkup.setKeyboard(keyboardRows);
+        sendMessage.setReplyMarkup(replyMarkup);
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADD_TIME);
+        return sendMessage;
+    }
+    
+    private SendMessage addCourseSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Enter the course info in the format: COURSE_NAME,NUM_OF_CREDITS,PROFESSOR,ROOM\n"
+                + "Required fields: COURSE_NAME,NUM_OF_CREDITS\n"
+                + "Example: Calculus,3,Mark Zuckerberg,106-711\n"
+                + "Or write /cancel to go to previous menu");
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADD_COURSE);
+        return sendMessage;
+    }
+    
+    private SendMessage deleteCourseSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("TODO");
+        // State doesn't change (for now only)
+        return sendMessage;
+    }
+    
+    private SendMessage generateNewScheduleSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("TODO");
+        // State doesn't change (for now only)
+        return sendMessage;
+    }
+    
+    private SendMessage courseSettingsSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Select the menu item");
+        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
+        replyMarkup.setOneTimeKeyboard(true);
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        KeyboardRow keyboardRow = new KeyboardRow();
+        keyboardRow.add("/add_course");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/delete_course");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/cancel");
+        keyboardRows.add(keyboardRow);
+        replyMarkup.setKeyboard(keyboardRows);
+        sendMessage.setReplyMarkup(replyMarkup);
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COURSE_SETTINGS);
+        return sendMessage;
+    }
+    
+    private SendMessage menuSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Select the menu item");
+        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
+        replyMarkup.setOneTimeKeyboard(true);
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        KeyboardRow keyboardRow = new KeyboardRow();
+        keyboardRow.add("/course_settings");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/view_courses");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/generate_new_schedule");
+        keyboardRows.add(keyboardRow);
+        replyMarkup.setKeyboard(keyboardRows);
+        sendMessage.setReplyMarkup(replyMarkup);
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), MAIN_MENU);
+        return sendMessage;
+    }
+    
+    private SendMessage defaultSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        ReplyKeyboardRemove replyMarkup = new ReplyKeyboardRemove();
+        sendMessage.setText("Welcome to our app, " + 
+                (message.getFrom().getUserName() == null ? "" : message.getFrom().getUserName()) + 
+                "!\nTo begin write /menu").setReplyMarkup(replyMarkup);
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), START_STATE);
+        return sendMessage;
     }
     
     @Override

@@ -1,4 +1,5 @@
 /.gradle/
 _Consts.java
+__Consts.java
 *.class
-
+/build/
