@@ -105,7 +105,7 @@ public class Scheduler {
                 for(int minute = startTime; minute < endTime; minute++){
                     if(mainBitSet.get(minute) == true){
                         backTime = time;
-                        backMinute = minute;
+                        backMinute = minute - 1;
                         checkTime = false;
                         break;
                     }
@@ -114,7 +114,7 @@ public class Scheduler {
             }
         }
         for(int time = backTime; time >= 0; time--){
-            for(int minute = backMinute-1; minute >= 0; minute--){
+            for(int minute = backMinute; minute >= 0; minute--){
                 mainBitSet.clear(minute);
             }
         }
