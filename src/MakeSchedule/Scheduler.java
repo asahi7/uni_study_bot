@@ -1,17 +1,18 @@
 package MakeSchedule;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.*;
 import javafx.util.Pair;
 
 public class Scheduler {
 
     private static ArrayList<Course> courses = new ArrayList<>();
+    private static ArrayList<Pair<Integer, Integer>> combination = new ArrayList<>();
     private static ArrayList<ArrayList<Pair<Integer, Integer>>> courseCombinations = new ArrayList<>();
-    private static ArrayList<Pair<Pair<Integer, Integer>, BitSet>> Combination = new ArrayList<>();
-    private static ArrayList<ArrayList<Pair<Pair<Integer, Integer>, BitSet>>> Combinations = new ArrayList<>();
-    private static HashMap<Pair<Integer, Integer>, BitSet > bitsets = new HashMap<>();
+    private static BitSet mainBitSet = new BitSet();
 
-    private static int countMinutes(String day){
+    private static int countMinutesInDay(String day){
         switch (day){
             case "Monday":
                 return 0;
@@ -31,19 +32,23 @@ public class Scheduler {
         return 0;
     }
 
-
-    public static ArrayList<ArrayList<Pair<Integer, Integer> >> getCourseCombinations(ArrayList<Course> newCourses) {
+    public static String getCourseCombinations(ArrayList<Course> newCourses) {
         setCourses(newCourses);
         combineCourses(0);
-        retrieveCourseCombinations();
+        return showSchedule();
+    }
+
+
+    public static ArrayList<ArrayList<Pair<Integer, Integer> >> getCourseCombinationsList(ArrayList<Course> newCourses) {
+        setCourses(newCourses);
+        combineCourses(0);
         return courseCombinations;
     }
 
     private static void setCourses(ArrayList<Course> newCourses){
-        Combinations.clear();
-        Combination.clear();
+        combination.clear();
         courseCombinations.clear();
-        bitsets.clear();
+        mainBitSet.clear();
         courses.clear();
         courses = newCourses;
     }
@@ -51,87 +56,100 @@ public class Scheduler {
     private static void combineCourses(int courseIndex){
         if(courseIndex == courses.size()){
             addCombinationToSchedule();
+            mainBitSet.clear();
         }
         else{
             for(int optionIndex = 0; optionIndex < courses.get(courseIndex).getCourseTime().size(); optionIndex++){
-                Pair<Pair<Integer, Integer>, BitSet> currentTimeSlot = getTimeSlotBitSet(new Pair(courseIndex, optionIndex));
-                if(canAddTimeSlot(currentTimeSlot)){
-                    Combination.add(currentTimeSlot);
+                if(canAddTimeSlot(courseIndex,optionIndex )){
+                    combination.add(new Pair(courseIndex,optionIndex));
                     combineCourses(courseIndex+1);
-                    Combination.remove(currentTimeSlot);
+                    combination.remove(new Pair(courseIndex,optionIndex));
                 }
             }
         }
     }
 
+    private static boolean canAddTimeSlot(int courseIndex, int optionIndex){
+        ArrayList<TimeSlotOptions> courseTime = (courses.get(courseIndex).getCourseTime());
+        HashMap<String, ArrayList<Time>> timeSlots = courseTime.get(optionIndex).getTimeSlots();
 
-    private static void retrieveCourseCombinations(){
-        for(int i = 0; i<Combinations.size(); i++){
-            ArrayList<Pair<Integer, Integer>> schedule = new ArrayList<>();
-            for (int j = 0; j<Combinations.get(i).size();j++){
-                schedule.add(Combinations.get(i).get(j).getKey());
-              //  System.out.println(Combinations.get(i).get(j).getKey().getKey()+" "+ Combinations.get(i).get(j).getKey().getValue());
-            }
-            courseCombinations.add(schedule);
-        }
-
-    }
-
-
-    private static Pair<Pair<Integer, Integer>, BitSet> getTimeSlotBitSet(Pair<Integer, Integer> courseAndSection){
-
-        String name = courses.get(courseAndSection.getKey()).getCourseName();
-        if(bitsets.containsKey(courseAndSection)){
-            return new Pair(courseAndSection, bitsets.get(courseAndSection));
-        }
-
-        BitSet timeBitSet= new BitSet();
-        ArrayList<TimeSlotOptions> courseTime = (courses.get(courseAndSection.getKey()).getCourseTime());
-        HashMap<String, ArrayList<Time>> timeSlots = courseTime.get(courseAndSection.getValue()).getTimeSlots();
-
-        for(Map.Entry<String, ArrayList<Time>> entry: timeSlots.entrySet()){
-
-            int minutesInADay =  countMinutes(entry.getKey());
-            for(int i = 0; i < entry.getValue().size(); i++){
-                int startTimeInMinutes = minutesInADay + timeSlots.get(entry.getKey()).get(i).getStartTime();
-                int endTimeInMinutes = minutesInADay + timeSlots.get(entry.getKey()).get(i).getEndTime();
-               // System.out.println(startTimeInMinutes+"->"+endTimeInMinutes+" at "+entry.getKey()+" ("+courseAndSection.getKey()+","+courseAndSection.getValue()+")");
-                for(int j = startTimeInMinutes ; j <endTimeInMinutes && j<20000; j++){
-                    timeBitSet.set(j);
+        for(String day: timeSlots.keySet()){
+                if(!checkTimes(courseIndex, optionIndex, day)){
+                    return false;
                 }
-            }
         }
 
-        bitsets.putIfAbsent(courseAndSection,timeBitSet);
-        return new Pair(courseAndSection,timeBitSet);
-
-    }
-
-    private static boolean canAddTimeSlot(Pair<Pair<Integer, Integer>, BitSet>  newTimeSlot){
-        for(int i = 0; i < Combination.size(); i++){
-            if(Combination.get(i).getValue().intersects(newTimeSlot.getValue())) {
-                return false;
-            }
-        }
         return true;
     }
 
-    private static void printCombination(ArrayList<Pair<Pair<Integer, Integer>, BitSet>> Combination){
-        for(int i = 0; i< Combination.size(); i++){
-            System.out.println("CourseId:" + Combination.get(i).getKey().getKey()+" SectionId: "+ Combination.get(i).getKey().getValue());
-        }
+    private static int getStartTime(int courseIndex, int optionIndex, String day, int t){
+        Time time = courses.get(courseIndex).getCourseTime().get(optionIndex).getTimeSlots().get(day).get(t);
+        int startTime = countMinutesInDay(day) + time.getStartTime();
+        return startTime;
     }
 
-    private static void printCombinations(){
-        for(int i = 0; i<Combinations.size(); i++){
-            printCombination(Combinations.get(i));
+    private static int getEndTime(int courseIndex, int optionIndex, String day, int t){
+        Time time = courses.get(courseIndex).getCourseTime().get(optionIndex).getTimeSlots().get(day).get(t);
+        int endTime = countMinutesInDay(day) + time.getEndTime();
+        return endTime;
+    }
+
+    private static boolean checkTimes(int courseIndex, int optionIndex, String day){
+        ArrayList<Time> times = courses.get(courseIndex).getCourseTime().get(optionIndex).getTimeSlots().get(day);
+        boolean checkTime = true;
+        int backTime = 0, backMinute = 1;
+        for(int time = 0; time < times.size(); time++){
+            if(checkTime){
+                int startTime = getStartTime(courseIndex, optionIndex, day, time);
+                int endTime = getEndTime(courseIndex, optionIndex, day, time);
+                for(int minute = startTime; minute < endTime; minute++){
+                    if(mainBitSet.get(minute) == true){
+                        backTime = time;
+                        backMinute = minute;
+                        checkTime = false;
+                        break;
+                    }
+                    mainBitSet.set(minute);
+                }
+            }
         }
+        for(int time = backTime; time >= 0; time--){
+            for(int minute = backMinute-1; minute >= 0; minute--){
+                mainBitSet.clear(minute);
+            }
+        }
+        return checkTime;
     }
 
     private static void addCombinationToSchedule(){
-        ArrayList<Pair<Pair<Integer, Integer>, BitSet>> newCombination = new ArrayList<>(Combination);
-        Combinations.add(newCombination);
+        ArrayList<Pair<Integer, Integer>> newCombination = new ArrayList<>(combination);
+        courseCombinations .add(newCombination);
     }
 
-
+    static String showSchedule(){
+        ByteArrayOutputStream byteArrayOutputStream  = new ByteArrayOutputStream();
+        PrintStream printStream = new PrintStream(byteArrayOutputStream );
+        PrintStream old = System.out;
+        System.setOut(printStream);
+        for(int i = 0; i<courseCombinations.size();i++){
+            System.out.print('{');
+            for(int j = 0; j<courseCombinations.get(i).size();j++){
+                int courseIndex = courseCombinations.get(i).get(j).getKey();
+                int optionIndex = courseCombinations.get(i).get(j).getValue();
+                HashMap<String, ArrayList<Time>>  timeSlots = courses.get(courseIndex).getCourseTime().get(optionIndex).getTimeSlots();
+                System.out.print("(");
+                System.out.print(courses.get(courseIndex).getCourseName()+":");
+                for(Map.Entry<String, ArrayList<Time>> entry: timeSlots.entrySet()){
+                    for(int time = 0; time < entry.getValue().size(); time++){
+                        System.out.print("["+entry.getKey()+", "+entry.getValue().get(time).getStartTime()+" - "+entry.getValue().get(time).getEndTime()+"]");
+                    }
+                }
+                System.out.print(")");
+            }
+            System.out.println('}');
+        }
+        System.out.flush();
+        System.setOut(old);
+        return byteArrayOutputStream.toString();
+    }
 }
