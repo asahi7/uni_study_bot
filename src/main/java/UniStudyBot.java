@@ -15,6 +15,9 @@ import com.google.common.base.Preconditions;
 import java.util.logging.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
@@ -67,19 +70,28 @@ public class UniStudyBot extends TelegramLongPollingBot
             case 8:
                 result = "GENERATE_NEW_SCHEDULE";
                 break;
+            default: 
+                result = "YOU FORGOT TO ADD DESCRIPTION OF THE COMMAND!";
+                break;
         }
         return result;
     }
     
     private SendMessage onCommandReceived(Message message) {
         SendMessage sendMessage = null;
-        switch(message.getText())
+        switch(message.getText().split(" ")[0])
         {
             case "/menu":
                 sendMessage = menuSelected(message);
                 break;
             case "/start":
                 sendMessage = defaultSelected(message);
+                break;
+            case "/add_time":
+                sendMessage = onAddTime(message);
+                break;
+            case "/view_courses":
+                sendMessage = viewCoursesSelected(message);
                 break;
             default:
                 sendMessage = null;
@@ -149,6 +161,28 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
     }
     
+    private void sendErrorMessage(String errorMessage, Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setReplyToMessageId(message.getMessageId()).setText(errorMessage);
+        sendMessage.setChatId(message.getChatId());
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private List<String> splitInputAddEmptyStrings(Message message, int emptyStringsNum) {
+        Splitter splitter = Splitter.on(',').trimResults();
+        List<String> strings = Lists.newArrayList((splitter.splitToList(message.getText())));
+        List<String> emptyStrings = new ArrayList<>();
+        for(int i = 0; i < emptyStringsNum; i++) {
+            emptyStrings.add("");
+        }
+        strings.addAll(emptyStrings);
+        return strings;
+    }
+    
     private SendMessage onDefault(Message message) {
         if(message.getText().equals("/menu")) {
             return menuSelected(message);
@@ -165,7 +199,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             return generateNewScheduleSelected(message); // TODO
         }
         else if(message.getText().equals("/view_courses")) {
-            // TODO
+            return viewCoursesSelected(message);
         }
         return menuSelected(message);
     }
@@ -175,26 +209,19 @@ public class UniStudyBot extends TelegramLongPollingBot
             return addCourseSelected(message);
         } else if(message.getText().equals("/delete_course")) {
             return deleteCourseSelected(message); // TODO
+        } else if(message.getText().equals("/view_courses")) {
+            return viewCoursesSelected(message); // TODO
         } else if(message.getText().equals("/cancel")) {
-            return menuSelected(message);
+            cancelForceReply(message);
+            return menuSelected(message).setReplyToMessageId(null);
         }
         return courseSettingsSelected(message);
-    }
-    
-    private List<String> splitInputAddEmptyStrings(Message message, int emptyStringsNum) {
-        Splitter splitter = Splitter.on(',').trimResults();
-        List<String> strings = Lists.newArrayList((splitter.splitToList(message.getText())));
-        List<String> emptyStrings = new ArrayList<>();
-        for(int i = 0; i < emptyStringsNum; i++) {
-            emptyStrings.add("");
-        }
-        strings.addAll(emptyStrings);
-        return strings;
     }
     
     // TODO make courseName case-insensitive
     private SendMessage onAddCourse(Message message) {
         if(message.getText().equals("/cancel")) {
+            cancelForceReply(message);
             return courseSettingsSelected(message);
         }
         try {
@@ -221,13 +248,18 @@ public class UniStudyBot extends TelegramLongPollingBot
     
     private SendMessage onAddingTime(Message message) {
         if(message.getText().equals("/cancel")) {
-            return courseSettingsSelected(message);
+            cancelForceReply(message);
+            return courseSettingsSelected(message).setReplyToMessageId(null);
         }
         SendMessage sendMessage = new SendMessage();
-        Message reply = message.getReplyToMessage();
-        System.out.println(reply.getText()); // DEBUG ONLY
         String courseName = null;
+        Message reply;
         try {
+            reply = message.getReplyToMessage();
+            Preconditions.checkNotNull(reply);
+            Preconditions.checkNotNull(reply.getText());
+            Preconditions.checkArgument(! reply.getText().equals(""));
+            System.out.println(reply.getText()); // DEBUG ONLY
             // TODO change to regular expressions
             courseName = reply.getText().split("\n")[0];
             courseName = courseName.split(": ")[1];
@@ -252,7 +284,9 @@ public class UniStudyBot extends TelegramLongPollingBot
             return addTimeSelected(message, courseName).setText("Time was successfully added");
         } catch (IllegalArgumentException | NullPointerException e) {
             ForceReplyKeyboard forceReplyKeyboard = new ForceReplyKeyboard();
-            sendMessage.setText(reply.getText() + "\n\nIncorrect format").setReplyMarkup(forceReplyKeyboard);
+            // TODO incorrect format 2 or more times BUG
+            sendErrorMessage("Incorrect format", message);
+            sendMessage.setText(reply.getText()).setReplyMarkup(forceReplyKeyboard);
             // sendMessage.setText("Incorrect format\nEnter again or /cancel");
             return sendMessage;
         } 
@@ -262,14 +296,48 @@ public class UniStudyBot extends TelegramLongPollingBot
         return courseSettingsSelected(message);
     }
     
+    // TODO remove reply label from a user (Seems Desktop Telegram app only)
+    private void cancelForceReply(Message message) { 
+        try {
+            /*Class<?> forceReplyKeyboardClass = ForceReplyKeyboard.class;
+            Object forceReplyKeyboard = forceReplyKeyboardClass.newInstance();
+            Field field = forceReplyKeyboard.getClass().getDeclaredField("forceReply");
+            field.setAccessible(true);
+            field.set(forceReplyKeyboard, false);
+            ForceReplyKeyboard forceReplyKeyboard2 = (ForceReplyKeyboard) forceReplyKeyboard;*/
+            SendMessage sendMessage = new SendMessage().setText("Cancelling..");
+            sendMessage.setReplyMarkup(new ReplyKeyboardRemove());
+            sendMessage.setChatId(message.getChatId());
+            execute(sendMessage);
+            // System.out.println(forceReplyKeyboard2.getForceReply()); // DEBUG ONLY
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
     /* /add_time courseName */
     private SendMessage onAddTime(Message message) { 
         if(message.getText().split(" ")[0].equals("/add_time")) {
             return addingTimeSelected(message);
         } else if(message.getText().equals("/cancel")) {
-            return menuSelected(message);
+            cancelForceReply(message);
+            return menuSelected(message).setReplyToMessageId(null);
         }
         return null;
+    }
+    
+    private SendMessage viewCoursesSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        String courses = Database.getInstance().getAllCourses(message.getFrom().getId());
+        if(courses == null) courses = "You don't have courses yet";
+        sendMessage.setText(courses);
+        final int state = Database.getInstance().getState(message.getFrom().getId(), message.getChatId());
+        if(state == MAIN_MENU) {
+            sendMessage.setReplyMarkup(getMenuKeyboard());
+        } else if(state == COURSE_SETTINGS) {
+            sendMessage.setReplyMarkup(getCourseSettingsKeyboard());
+        }
+        return sendMessage;
     }
     
     private SendMessage addingTimeSelected(Message message) {
@@ -279,9 +347,16 @@ public class UniStudyBot extends TelegramLongPollingBot
         try{
             courseName = splitter.splitToList(message.getText()).get(1);
             Preconditions.checkNotNull(courseName);
-            Preconditions.checkArgument(! courseName.equals("") && Database.getInstance().existsCourseName(message.getFrom().getId(), courseName));
+            Preconditions.checkArgument(! courseName.equals(""));
+            if(! Database.getInstance().existsCourseName(message.getFrom().getId(), courseName)) {
+                throw new NoSuchElementException();
+            }
         } catch(IndexOutOfBoundsException | IllegalArgumentException | NullPointerException e) {
             sendMessage.setText("Incorrect format, should be /add_time <COURSE_NAME>");
+            Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), MAIN_MENU);
+            return sendMessage;
+        } catch (NoSuchElementException e) {
+            sendMessage.setText("Such course does not exist. Please check your syntax");
             Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), MAIN_MENU);
             return sendMessage;
         }
@@ -335,10 +410,8 @@ public class UniStudyBot extends TelegramLongPollingBot
         // State doesn't change (for now only)
         return sendMessage;
     }
-    
-    private SendMessage courseSettingsSelected(Message message) {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setText("Select the menu item");
+      
+    private ReplyKeyboardMarkup getCourseSettingsKeyboard() {
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
         replyMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
@@ -349,17 +422,24 @@ public class UniStudyBot extends TelegramLongPollingBot
         keyboardRow.add("/delete_course");
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
+        keyboardRow.add("/view_courses");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
         keyboardRow.add("/cancel");
         keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
-        sendMessage.setReplyMarkup(replyMarkup);
+        return replyMarkup;
+    }
+    
+    private SendMessage courseSettingsSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Select the menu item");
+        sendMessage.setReplyMarkup(getCourseSettingsKeyboard());
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COURSE_SETTINGS);
         return sendMessage;
     }
     
-    private SendMessage menuSelected(Message message) {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setText("Select the menu item");
+    private ReplyKeyboardMarkup getMenuKeyboard() {
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
         replyMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
@@ -373,7 +453,13 @@ public class UniStudyBot extends TelegramLongPollingBot
         keyboardRow.add("/generate_new_schedule");
         keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
-        sendMessage.setReplyMarkup(replyMarkup);
+        return replyMarkup;
+    }
+    
+    private SendMessage menuSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Select the menu item");
+        sendMessage.setReplyMarkup(getMenuKeyboard());
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), MAIN_MENU);
         return sendMessage;
     }

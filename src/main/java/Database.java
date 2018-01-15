@@ -138,4 +138,41 @@ public class Database
             logger.log(Level.SEVERE, "Error occurred while intesrting to the times table", e);
         }
     }
+    
+    public String getAllCourses(int userId) {
+        try(PreparedStatement statement = connection.prepareStatement("SELECT courses.*,times.day,times.start_time,times.end_time FROM `courses` LEFT JOIN"
+                + " `times` on courses.name=times.name and courses.user_id=times.user_id WHERE courses.user_id=? ORDER BY name ASC")) {
+            statement.setInt(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            StringBuilder sb = new StringBuilder();
+            String prev = "";
+            while(resultSet.next()) {
+                if(! prev.equals(resultSet.getString("name")) && ! prev.equals("")) {
+                    sb.append("}\n");
+                }
+                if(! prev.equals(resultSet.getString("name"))) {
+                    sb.append("{\n");
+                    sb.append(resultSet.getString("name") + "\nCredits: " + resultSet.getString("credits") + "\n");
+                    if(resultSet.getString("professor") != null) sb.append("Professor: " + resultSet.getString("professor") + "\n");
+                    if(resultSet.getString("room") != null) sb.append("Room: " + resultSet.getString("room") + "\n");
+                    if(resultSet.getString("letter") != null) sb.append("Letter: " + resultSet.getString("letter") + "\n");
+                    if(resultSet.getString("four_zero") != null) sb.append("4.0: " + resultSet.getString("four_zero") + "\n");
+                    if(resultSet.getString("four_three") != null) sb.append("4.3: " + resultSet.getString("four_three") + "\n");
+                    if(resultSet.getString("percentage") != null) sb.append("%:" + resultSet.getString("percentage") + "\n");
+                }
+                if(resultSet.getString("day") != null) {
+                    sb.append(resultSet.getString("day") + ", " + resultSet.getString("start_time").substring(0, 5) + " - "
+                            + resultSet.getString("end_time").substring(0, 5) + "\n");
+                }
+                prev = resultSet.getString("name");
+            }
+            if(! prev.equals("")) {
+                sb.append("}\n");
+            }
+            return (sb.toString().equals("") ? null : sb.toString());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }
