@@ -22,6 +22,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 
+import MakeSchedule.Scheduler;
+
 import java.util.*;
 
 public class UniStudyBot extends TelegramLongPollingBot
@@ -37,7 +39,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     private static final int ADDING_TIME = 5;
     private static final int DELETING_COURSE = 7;
     // Course Settings END
-    private static final int GENERATE_NEW_SCHEDULE = 8;
+    private static final int GENERATING_NEW_SCHEDULE = 8;
     
     public String getStateFromInt(int state) {
         String result = "";
@@ -64,7 +66,7 @@ public class UniStudyBot extends TelegramLongPollingBot
                 result = "DELETING_COURSE";
                 break;       
             case 8:
-                result = "GENERATE_NEW_SCHEDULE";
+                result = "GENERATING_NEW_SCHEDULE";
                 break;
             default: 
                 result = "YOU FORGOT TO ADD DESCRIPTION OF THE COMMAND!";
@@ -141,6 +143,9 @@ public class UniStudyBot extends TelegramLongPollingBot
                 case DELETING_COURSE: // TODO
                     sendMessage = onDeletingCourse(message);
                     break;
+                case GENERATING_NEW_SCHEDULE:
+                    sendMessage = onGeneratingNewSchedule(message);
+                    break;
                 default:
                     sendMessage = onDefault(message);
                     break;
@@ -214,7 +219,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             return courseSettingsSelected(message);
         }
         else if(message.getText().equals("/generate_new_schedule")) {
-            return generateNewScheduleSelected(message); // TODO
+            return generateNewScheduleSelected(message);
         }
         else if(message.getText().equals("/view_courses")) {
             return viewCoursesSelected(message);
@@ -226,14 +231,32 @@ public class UniStudyBot extends TelegramLongPollingBot
         if(message.getText().equals("/add_course")) {
             return addCourseSelected(message);
         } else if(message.getText().equals("/delete_course")) {
-            return deleteCourseSelected(message); // TODO
+            return deleteCourseSelected(message); 
         } else if(message.getText().equals("/view_courses")) {
-            return viewCoursesSelected(message); // TODO
+            return viewCoursesSelected(message); 
         } else if(message.getText().equals("/cancel")) {
             cancelForceReply(message);
             return menuSelected(message).setReplyToMessageId(null);
         }
         return courseSettingsSelected(message);
+    }
+    
+    private SendMessage onGeneratingNewSchedule(Message message)
+    {
+        if(message.getText().equals("/cancel")) {
+            cancelForceReply(message);
+            return menuSelected(message);
+        }
+        try {
+            // TODO make preconditions checking
+            SendMessage sendMessage = new SendMessage();
+            String result = Scheduler.doWork(message.getText());
+            sendMessage.setText(result);
+            return sendMessage;
+        } catch (Exception e) {
+            e.printStackTrace(); // TODO
+        }
+        return menuSelected(message);
     }
     
     // TODO make courseName case-insensitive
@@ -300,7 +323,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         return courseSettingsSelected(message); 
     }
     
-    private SendMessage onAddingTime(Message message) {
+    private SendMessage onAddingTime(Message message) { // TODO make adding time with commas
         if(message.getText().equals("/cancel")) {
             cancelForceReply(message);
             return courseSettingsSelected(message).setReplyToMessageId(null);
@@ -379,7 +402,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
     
     private SendMessage addingTimeSelected(Message message) {
-        Splitter splitter = Splitter.on(' ').trimResults();
+        Splitter splitter = Splitter.on(' ').trimResults().limit(2);
         SendMessage sendMessage = new SendMessage();
         String courseName = null;
         try{
@@ -447,8 +470,10 @@ public class UniStudyBot extends TelegramLongPollingBot
     
     private SendMessage generateNewScheduleSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
-        sendMessage.setText("TODO");
-        // State doesn't change (for now only)
+        sendMessage.setText("Enter the name of courses along with their respective schedule\n"
+                + "Example: " // TODO
+                + "Or write /cancel to go to previous menu");
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), GENERATING_NEW_SCHEDULE);
         return sendMessage;
     }
       

@@ -26,6 +26,7 @@ dependencies {
     compile "org.telegram:telegrambots:3.5"
 
     compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.6'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.0'
 
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'

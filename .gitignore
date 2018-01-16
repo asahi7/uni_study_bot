@@ -1,5 +1,5 @@
 /.gradle/
-_Consts.java
-__Consts.java
+src/main/java/_Consts.java
+src/main/java/__Consts.java
 *.class
 /build/

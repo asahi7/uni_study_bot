@@ -3,7 +3,7 @@ package MakeSchedule;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.*;
-import javafx.util.Pair;
+import org.apache.commons.lang3.tuple.Pair;
 
 public class Scheduler {
 
@@ -68,9 +68,11 @@ public class Scheduler {
         else{
             for(int optionIndex = 0; optionIndex < courses.get(courseIndex).getCourseTime().size(); optionIndex++){
                 if(canAddTimeSlot(courseIndex,optionIndex )){
-                    combination.add(new Pair(courseIndex,optionIndex));
+                    //combination.add(new Pair(courseIndex,optionIndex));
+                    combination.add(Pair.of(courseIndex,optionIndex));
                     combineCourses(courseIndex+1);
-                    combination.remove(new Pair(courseIndex,optionIndex));
+                    //combination.remove(new Pair(courseIndex,optionIndex));
+                    combination.remove(Pair.of(courseIndex,optionIndex));
                 }
             }
         }
