@@ -32,10 +32,9 @@ public class UniStudyBot extends TelegramLongPollingBot
     private static final int MAIN_MENU = 1;
     // Course Settings BEGIN
     private static final int COURSE_SETTINGS = 2;
-    private static final int ADD_COURSE = 3;
+    private static final int ADDING_COURSE = 3;
     private static final int ADD_TIME = 4;
     private static final int ADDING_TIME = 5;
-    private static final int DELETE_COURSE = 6;
     private static final int DELETING_COURSE = 7;
     // Course Settings END
     private static final int GENERATE_NEW_SCHEDULE = 8;
@@ -53,16 +52,13 @@ public class UniStudyBot extends TelegramLongPollingBot
                 result = "COURSE_SETTINGS";
                 break;
             case 3:
-                result = "ADD_COURSE";
+                result = "ADDING_COURSE";
                 break;   
             case 4:
                 result = "ADD_TIME";
                 break;
             case 5:
                 result = "ADDING_TIME";
-                break;
-            case 6:
-                result = "DELETE_COURSE";
                 break;
             case 7:
                 result = "DELETING_COURSE";
@@ -133,14 +129,17 @@ public class UniStudyBot extends TelegramLongPollingBot
                 case COURSE_SETTINGS:
                     sendMessage = onCourseSettings(message);
                     break;
-                case ADD_COURSE:
-                    sendMessage = onAddCourse(message);
+                case ADDING_COURSE:
+                    sendMessage = onAddingCourse(message);
                     break;
                 case ADD_TIME:
                     sendMessage = onAddTime(message);
                     break;
                 case ADDING_TIME:
                     sendMessage = onAddingTime(message);
+                    break;
+                case DELETING_COURSE: // TODO
+                    sendMessage = onDeletingCourse(message);
                     break;
                 default:
                     sendMessage = onDefault(message);
@@ -183,6 +182,25 @@ public class UniStudyBot extends TelegramLongPollingBot
         return strings;
     }
     
+ // TODO remove reply label from a user (Seems Desktop Telegram app only)
+    private void cancelForceReply(Message message) { 
+        try {
+            /*Class<?> forceReplyKeyboardClass = ForceReplyKeyboard.class;
+            Object forceReplyKeyboard = forceReplyKeyboardClass.newInstance();
+            Field field = forceReplyKeyboard.getClass().getDeclaredField("forceReply");
+            field.setAccessible(true);
+            field.set(forceReplyKeyboard, false);
+            ForceReplyKeyboard forceReplyKeyboard2 = (ForceReplyKeyboard) forceReplyKeyboard;*/
+            SendMessage sendMessage = new SendMessage().setText("Cancelling..");
+            sendMessage.setReplyMarkup(new ReplyKeyboardRemove());
+            sendMessage.setChatId(message.getChatId());
+            execute(sendMessage);
+            // System.out.println(forceReplyKeyboard2.getForceReply()); // DEBUG ONLY
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
     private SendMessage onDefault(Message message) {
         if(message.getText().equals("/menu")) {
             return menuSelected(message);
@@ -219,7 +237,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
     
     // TODO make courseName case-insensitive
-    private SendMessage onAddCourse(Message message) {
+    private SendMessage onAddingCourse(Message message) {
         if(message.getText().equals("/cancel")) {
             cancelForceReply(message);
             return courseSettingsSelected(message);
@@ -238,6 +256,42 @@ public class UniStudyBot extends TelegramLongPollingBot
         } catch(IllegalArgumentException e) {
             logger.log(Level.INFO, "This message was passed: " + message.getText() + "\nFrom user: " + message.getFrom().getId(), e);
             return addCourseSelected(message);
+        }
+        catch(Exception e) {
+            logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
+        }
+        // If something goes unexpected
+        return courseSettingsSelected(message); 
+    }
+    
+    private SendMessage onDeletingCourse(Message message) {
+        if(message.getText().equals("/cancel")) {
+            cancelForceReply(message);
+            return courseSettingsSelected(message);
+        }
+        try {
+            List<String> strings = splitInputAddEmptyStrings(message, 0);
+            Preconditions.checkArgument(strings.size() > 0);
+            for(int i = 0; i < strings.size(); i++) {
+                String name = strings.get(i);
+                Preconditions.checkArgument(! name.equals("") && name != null);
+                if(! Database.getInstance().existsCourseName(message.getFrom().getId(), name)) {
+                    throw new NoSuchElementException();
+                }
+            }
+            for(int i = 0; i < strings.size(); i++) {
+                String name = strings.get(i);
+                Database.getInstance().deleteCourse(message.getFrom().getId(), name);
+            }
+            return courseSettingsSelected(message).setText("Courses were successfully deleted");
+        } catch (NoSuchElementException e) {
+            logger.log(Level.INFO, "This message was passed: " + message.getText() + "\nFrom user: " + message.getFrom().getId(), e);
+            sendErrorMessage("Course does not exist", message);
+            return deleteCourseSelected(message);
+        } catch(IllegalArgumentException e) {
+            logger.log(Level.INFO, "This message was passed: " + message.getText() + "\nFrom user: " + message.getFrom().getId(), e);
+            sendErrorMessage("Incorrect format", message);
+            return deleteCourseSelected(message);
         }
         catch(Exception e) {
             logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
@@ -271,23 +325,26 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         try {
             List<String> strings = splitInputAddEmptyStrings(message, 3);
-            DayOfWeek.valueOf(strings.get(0).toUpperCase());
-            //DateFormat dateFormat = new SimpleDateFormat("H:mm");
-            //Date dateStart = dateFormat.parse(strings.get(1));
-            //Date dateEnd = dateFormat.parse(strings.get(2));
-            // TODO add Preconditions checking; add format of the strings checking
-            // TODO check if startTime < endTime
-            String startTime = strings.get(1) + ":00";
-            String endTime = strings.get(2) + ":00";
-            System.out.println(startTime + " - " + endTime);
-            Database.getInstance().addTime(message.getFrom().getId(), courseName, strings.get(0), startTime, endTime);
+            Preconditions.checkArgument(! strings.get(0).equals(""));
+            String dayOfWeek = strings.get(0).toLowerCase();
+            dayOfWeek = Character.toUpperCase(dayOfWeek.charAt(0)) + dayOfWeek.substring(1); // TODO unicode?
+            System.out.println(dayOfWeek); // DEBUG ONLY
+            DayOfWeek.valueOf(dayOfWeek.toUpperCase());
+            String startTime = strings.get(1);
+            String endTime = strings.get(2);
+            if(! Pattern.matches("^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$", startTime) ||
+                    ! Pattern.matches("^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$", endTime)) {
+                throw new IllegalArgumentException();
+            }
+            startTime = startTime + ":00";
+            endTime = endTime + ":00";
+            System.out.println(startTime + " - " + endTime); // DEBUG ONLY
+            Database.getInstance().addTime(message.getFrom().getId(), courseName, dayOfWeek, startTime, endTime); 
             return addTimeSelected(message, courseName).setText("Time was successfully added");
         } catch (IllegalArgumentException | NullPointerException e) {
             ForceReplyKeyboard forceReplyKeyboard = new ForceReplyKeyboard();
-            // TODO incorrect format 2 or more times BUG
             sendErrorMessage("Incorrect format", message);
             sendMessage.setText(reply.getText()).setReplyMarkup(forceReplyKeyboard);
-            // sendMessage.setText("Incorrect format\nEnter again or /cancel");
             return sendMessage;
         } 
         catch (Exception e) {
@@ -296,32 +353,13 @@ public class UniStudyBot extends TelegramLongPollingBot
         return courseSettingsSelected(message);
     }
     
-    // TODO remove reply label from a user (Seems Desktop Telegram app only)
-    private void cancelForceReply(Message message) { 
-        try {
-            /*Class<?> forceReplyKeyboardClass = ForceReplyKeyboard.class;
-            Object forceReplyKeyboard = forceReplyKeyboardClass.newInstance();
-            Field field = forceReplyKeyboard.getClass().getDeclaredField("forceReply");
-            field.setAccessible(true);
-            field.set(forceReplyKeyboard, false);
-            ForceReplyKeyboard forceReplyKeyboard2 = (ForceReplyKeyboard) forceReplyKeyboard;*/
-            SendMessage sendMessage = new SendMessage().setText("Cancelling..");
-            sendMessage.setReplyMarkup(new ReplyKeyboardRemove());
-            sendMessage.setChatId(message.getChatId());
-            execute(sendMessage);
-            // System.out.println(forceReplyKeyboard2.getForceReply()); // DEBUG ONLY
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    
     /* /add_time courseName */
     private SendMessage onAddTime(Message message) { 
         if(message.getText().split(" ")[0].equals("/add_time")) {
             return addingTimeSelected(message);
         } else if(message.getText().equals("/cancel")) {
             cancelForceReply(message);
-            return menuSelected(message).setReplyToMessageId(null);
+            return courseSettingsSelected(message).setReplyToMessageId(null);
         }
         return null;
     }
@@ -393,14 +431,17 @@ public class UniStudyBot extends TelegramLongPollingBot
                 + "Required fields: COURSE_NAME,NUM_OF_CREDITS\n"
                 + "Example: Calculus,3,Mark Zuckerberg,106-711\n"
                 + "Or write /cancel to go to previous menu");
-        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADD_COURSE);
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADDING_COURSE);
         return sendMessage;
     }
     
     private SendMessage deleteCourseSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
-        sendMessage.setText("TODO");
-        // State doesn't change (for now only)
+        sendMessage.setText("Enter the course name you want to delete, or a list of them\n"
+                + "Example: Calculus,History,Fluid Mechanics\n"
+                + "Write the exact name as written in /view_courses\n"
+                + "Or write /cancel to go to previous menu");
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), DELETING_COURSE);
         return sendMessage;
     }
     

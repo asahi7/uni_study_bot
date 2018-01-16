@@ -79,6 +79,18 @@ public class Database
         }
     }
     
+    public void deleteCourse(int userId, String name) {
+        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM courses WHERE user_id=? AND name=?")) 
+        {
+            statement.setString(2, name);
+            statement.setInt(1, userId);
+            statement.execute();
+            logger.log(Level.INFO, "Deleting courses from courses table");
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error occurred while deleting rows from the courses table", e);
+        }
+    }
+    
     public void addCourse(int userId, String name, int credits) {
         addCourse(userId, name, credits, null, null);
     }
@@ -125,7 +137,7 @@ public class Database
     }
     
     public void addTime(int userId, String name, String day, String startTime, String endTime) {
-        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO times(user_id,name,day,start_time,end_time) VALUES(?,?,?,?,?)")) 
+        try (PreparedStatement statement = connection.prepareStatement("INSERT IGNORE INTO times(user_id,name,day,start_time,end_time) VALUES(?,?,?,?,?)")) 
         {
             statement.setInt(1, userId);
             statement.setString(2, name);

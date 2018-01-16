@@ -21,10 +21,11 @@ public class CreateTablesStrings
             + "section_id INTEGER AUTO_INCREMENT PRIMARY KEY,"
             + "name VARCHAR(255) NOT NULL,"
             + "user_id INTEGER NOT NULL,"
-            + "FOREIGN KEY(name,user_id) REFERENCES courses(name,user_id),"
+            + "FOREIGN KEY(name,user_id) REFERENCES courses(name,user_id) ON DELETE CASCADE,"
             + "day VARCHAR(20) NOT NULL,"
             + "start_time TIME NOT NULL,"
-            + "end_time TIME NOT NULL)";
+            + "end_time TIME NOT NULL,"
+            + "CONSTRAINT constr3 UNIQUE(name,user_id,day,start_time,end_time))";
     public final static String CREATE_STATES_TABLE = "CREATE TABLE IF NOT EXISTS states ("
             + "user_id INTEGER NOT NULL,"
             + "chat_id BIGINT NOT NULL,"
