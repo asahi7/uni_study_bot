@@ -7,6 +7,8 @@ import javafx.util.Pair;
 
 public class Scheduler {
 
+    // TODO : startTime>endTime case like saturday 23:30 - sunday 00:30
+
     private static ArrayList<Course> courses = new ArrayList<>();
     private static ArrayList<Pair<Integer, Integer>> combination = new ArrayList<>();
     private static ArrayList<ArrayList<Pair<Integer, Integer>>> courseCombinations = new ArrayList<>();
@@ -30,6 +32,11 @@ public class Scheduler {
                 return 8640;
         }
         return 0;
+    }
+
+    public static String doWork(String input){
+        CourseConverter cc = new CourseConverter();
+        return getCourseCombinations(cc.convertToCourses(input));
     }
 
     public static String getCourseCombinations(ArrayList<Course> newCourses) {
@@ -126,32 +133,20 @@ public class Scheduler {
         courseCombinations .add(newCombination);
     }
 
-    static String showSchedule(){
-        ByteArrayOutputStream byteArrayOutputStream  = new ByteArrayOutputStream();
-        PrintStream printStream = new PrintStream(byteArrayOutputStream );
-        PrintStream old = System.out;
-        System.setOut(printStream);
+    private static String showSchedule(){
+        CourseConverter cc = new CourseConverter();
+        StringBuilder mySchedule = new StringBuilder();
+
         for(int i = 0; i<courseCombinations.size();i++){
-            //System.out.print('{');
+            mySchedule.append("~"+"\n");
             for(int j = 0; j<courseCombinations.get(i).size();j++){
                 int courseIndex = courseCombinations.get(i).get(j).getKey();
                 int optionIndex = courseCombinations.get(i).get(j).getValue();
-                HashMap<String, ArrayList<Time>>  timeSlots = courses.get(courseIndex).getCourseTime().get(optionIndex).getTimeSlots();
-                //System.out.print("(");
-                System.out.print(courses.get(courseIndex).getCourseName()+":");
-                for(Map.Entry<String, ArrayList<Time>> entry: timeSlots.entrySet()){
-                    for(int time = 0; time < entry.getValue().size(); time++){
-                        System.out.print("["+entry.getKey()+", "+entry.getValue().get(time).getStartTime()+" - "+entry.getValue().get(time).getEndTime()+"]");
-                    }
-                }
-                System.out.println();
-               // System.out.print(")");
+                mySchedule.append(cc.courseToString(courses.get(courseIndex), optionIndex)+"\n");
             }
-            //System.out.println('}');
-            System.out.println();
+            mySchedule.append("\n");
         }
-        System.out.flush();
-        System.setOut(old);
-        return byteArrayOutputStream.toString();
+
+        return mySchedule.toString();
     }
 }

@@ -4,23 +4,35 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class CourseConverter {
-    Course convertToCourse(String record){
+    public Course convertToCourse(String record){
         return stringToCourse(record );
     }
 
-    String convertFromCourse(Course course, int option){
+    public String convertFromCourse(Course course, int option){
         return courseToString(course, option);
     }
 
-    ArrayList<Course> convertToCourses(String record){
+    public ArrayList<Course> convertToCourses(String record){
         ArrayList<Course> courses = new ArrayList<>();
+        String delims = "[\n]";
+        String[] tokens = record.split(delims);
+        for(int i = 0; i<tokens.length;i++){
+            Course newcourse = stringToCourse(tokens[i]);
+            courses.add(newcourse);
+        }
         return courses;
     }
+
+    public void showCourses(ArrayList<Course> courses){
+        for(int i=0; i<courses.size(); i++){
+            System.out.println(courseToString(courses.get(i),0));
+        }
+    }
+
 
 
     public Course stringToCourse(String course){
         //Math:(Monday 10:30-12:10, Tuesday 20:30 - 22:30) (Sunday 18:30 - 22:30)
-
         String delims = "[:]+";
         String[] tokens = course.split(delims,2);
 
@@ -36,49 +48,29 @@ public class CourseConverter {
                 courseTime.add(stringToTimeSlotOption(timeSlotsOptions[i]));
             }
         }
-        /*//TODO TEST START
-        System.out.println("####");
-        for(int i=0; i< courseTime.size();i++){
-            System.out.println("*");
-            for(ArrayList<Time> key: courseTime.get(i).getTimeSlots().values()){
-                for(int j=0;j<key.size(); j++){
-                    System.out.println(timeToString(key.get(j)));
-                }
-                //System.out.println(timeToString(key));
-            }
-            System.out.println("*");
-
-        }
-        System.out.println("####");
-        //TODO TEST START
-        */
         return new Course(courseName,courseTime);
     }
 
-
     public String courseToString(Course course,int timeSlotOption){
-        String str = course.getCourseName();
-        str+=": ";
-        str+=timeSloteOptionToString(course.getCourseTime().get(timeSlotOption));
-        return str;
+        StringBuilder str = new StringBuilder(course.getCourseName());
+        str.append(":");
+        str.append(timeSloteOptionToString(course.getCourseTime().get(timeSlotOption)));
+        return str.toString();
     }
 
-    //TODO(Me) timseslots is empty
     public String timeSloteOptionToString(TimeSlotOptions timeSlots){
-        //System.out.println("Cled");
-        String time = "";
+        StringBuilder time = new StringBuilder("(");
         for(String key: timeSlots.getTimeSlots().keySet()){
-            time+=key+" ";
             for(int i=0; i < timeSlots.getTimeSlots().get(key).size(); i++){
-                time+= timeToString(timeSlots.getTimeSlots().get(key).get(i));
-                time+=(i<timeSlots.getTimeSlots().get(key).size()-1?", ":" ");
+                time.append(key +" " +timeToString(timeSlots.getTimeSlots().get(key).get(i)));
+                time.append(",");
             }
         }
-       // System.out.println(timeSlots.getTimeSlots().size());
-        return time;
+        time = new StringBuilder(time.substring(0, time.length()-1));
+        time.append(")");
+        return time.toString();
     }
 
-    //Done?
     public TimeSlotOptions stringToTimeSlotOption(String timeSlot){
         HashMap<String, ArrayList<Time>> timeSlots =  new HashMap<>();
         // Monday 10:30-12:10, Tuesday 20:30 - 22:30 or ' '
@@ -101,10 +93,8 @@ public class CourseConverter {
             }
 
         }
-        //System.out.println((new TimeSlotOptions(timeSlots)).getTimeSlots().size());
         return new TimeSlotOptions(timeSlots);
     }
-//Done
 
     public Time stringToTime(String t){
         String delims = "[ :-]+";
@@ -112,7 +102,6 @@ public class CourseConverter {
 
         int startTime = getMinutes(Integer.parseInt(tokens[0]),Integer.parseInt(tokens[1]));
         int endTime = getMinutes(Integer.parseInt(tokens[2]),Integer.parseInt(tokens[3]));
-
         return new Time(startTime, endTime);
 
     }
@@ -122,9 +111,8 @@ public class CourseConverter {
         String  startMinute = getMinute(time.getStartTime());
         String  endHour = getHour(time.getEndTime());
         String  endMinute = getMinute(time.getEndTime());
-        return (startHour + ":" + startMinute + " - " + endHour + ":" + endMinute);
+        return (new StringBuilder(startHour + ":" + startMinute + " - " + endHour + ":" + endMinute).toString());
     }
-
 
     private int getMinutes(int hour, int minutes){
         return hour*60 + minutes;

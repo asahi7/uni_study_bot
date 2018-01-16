@@ -19,7 +19,7 @@ public class Time {
         return this.endTime;
     }
 
-    public void setEndTime(int endTime) {
+    public void setEndTime(int endTime){
         this.endTime = endTime;
     }
 
