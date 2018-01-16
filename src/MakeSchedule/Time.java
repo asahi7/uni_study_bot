@@ -26,4 +26,5 @@ public class Time {
     public void setStartTime(int startTime) {
         this.startTime = startTime;
     }
+
 }
