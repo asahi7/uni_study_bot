@@ -10,6 +10,10 @@ public class TimeSlotOptions {
         this.timeSlots = new HashMap<>();
     }
 
+    public TimeSlotOptions(HashMap<String, ArrayList<Time>> timeSlots){
+        this.timeSlots = timeSlots;
+    }
+
     public TimeSlotOptions(String day, Time time){
         this.timeSlots = new HashMap<>();
         ArrayList<Time> times = new ArrayList<>();

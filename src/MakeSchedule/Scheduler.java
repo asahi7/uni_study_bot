@@ -132,21 +132,23 @@ public class Scheduler {
         PrintStream old = System.out;
         System.setOut(printStream);
         for(int i = 0; i<courseCombinations.size();i++){
-            System.out.print('{');
+            //System.out.print('{');
             for(int j = 0; j<courseCombinations.get(i).size();j++){
                 int courseIndex = courseCombinations.get(i).get(j).getKey();
                 int optionIndex = courseCombinations.get(i).get(j).getValue();
                 HashMap<String, ArrayList<Time>>  timeSlots = courses.get(courseIndex).getCourseTime().get(optionIndex).getTimeSlots();
-                System.out.print("(");
+                //System.out.print("(");
                 System.out.print(courses.get(courseIndex).getCourseName()+":");
                 for(Map.Entry<String, ArrayList<Time>> entry: timeSlots.entrySet()){
                     for(int time = 0; time < entry.getValue().size(); time++){
                         System.out.print("["+entry.getKey()+", "+entry.getValue().get(time).getStartTime()+" - "+entry.getValue().get(time).getEndTime()+"]");
                     }
                 }
-                System.out.print(")");
+                System.out.println();
+               // System.out.print(")");
             }
-            System.out.println('}');
+            //System.out.println('}');
+            System.out.println();
         }
         System.out.flush();
         System.setOut(old);
