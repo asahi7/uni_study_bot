@@ -1,7 +1,5 @@
 package MakeSchedule;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.util.*;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -35,14 +33,21 @@ public class Scheduler {
     }
 
     public static String doWork(String input){
-        CourseConverter cc = new CourseConverter();
-        return getCourseCombinations(cc.convertToCourses(input));
-    }
-
-    public static String getCourseCombinations(ArrayList<Course> newCourses) {
+        ArrayList<Course> newCourses = convertToCourses(input);
         setCourses(newCourses);
         combineCourses(0);
         return showSchedule();
+    }
+
+    public static ArrayList<Course> convertToCourses(String record){
+        ArrayList<Course> courses = new ArrayList<>();
+        String delims = "[\n]";
+        String[] tokens = record.split(delims);
+        for(int i = 0; i<tokens.length;i++){
+            Course newcourse = new Course(tokens[i]);
+            courses.add(newcourse);
+        }
+        return courses;
     }
 
 
@@ -136,7 +141,6 @@ public class Scheduler {
     }
 
     private static String showSchedule(){
-        CourseConverter cc = new CourseConverter();
         StringBuilder mySchedule = new StringBuilder();
 
         for(int i = 0; i<courseCombinations.size();i++){
@@ -144,7 +148,7 @@ public class Scheduler {
             for(int j = 0; j<courseCombinations.get(i).size();j++){
                 int courseIndex = courseCombinations.get(i).get(j).getKey();
                 int optionIndex = courseCombinations.get(i).get(j).getValue();
-                mySchedule.append(cc.courseToString(courses.get(courseIndex), optionIndex)+"\n");
+                mySchedule.append((courses.get(courseIndex).courseToString(optionIndex))+"\n");
             }
             mySchedule.append("\n");
         }
