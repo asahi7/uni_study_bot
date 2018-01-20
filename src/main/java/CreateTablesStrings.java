@@ -10,12 +10,12 @@ public class CreateTablesStrings
             + "credits INTEGER NOT NULL DEFAULT 0,"
             + "user_id INTEGER NOT NULL,"
             + "FOREIGN KEY(user_id) REFERENCES users(user_id),"
-            + "letter VARCHAR(3),"
+           // + "letter VARCHAR(3),"
             + "room VARCHAR(255),"
             + "professor VARCHAR(255),"
-            + "four_zero DECIMAL(3,2),"
-            + "four_three DECIMAL(3,2),"
-            + "percentage INTEGER(3),"
+          //  + "four_zero DECIMAL(3,2)," // TODO delete this
+          //  + "four_three DECIMAL(3,2),"
+          //  + "percentage INTEGER(3),"
             + "CONSTRAINT constr2 PRIMARY KEY(name,user_id))";
     public final static String CREATE_TIMES_TABLE = "CREATE TABLE IF NOT EXISTS times ("
             + "section_id INTEGER AUTO_INCREMENT PRIMARY KEY,"
@@ -32,4 +32,15 @@ public class CreateTablesStrings
             + "FOREIGN KEY(user_id) REFERENCES users(user_id),"
             + "state INTEGER NOT NULL DEFAULT 0,"
             + "CONSTRAINT constr3 PRIMARY KEY(user_id,chat_id))";
+    public final static String CREATE_GPA_SETS_TABLE = "CREATE TABLE IF NOT EXISTS gpa_sets ("
+            + "user_id INTEGER NOT NULL,"
+            + "set_id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,"
+            + "gpa DECIMAL(3,2) NOT NULL,"
+            + "FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)";
+    public final static String CREATE_GPA_SET_COURSES_TABLE = "CREATE TABLE IF NOT EXISTS gpa_set_courses ("
+            + "set_id INTEGER NOT NULL,"
+            + "name VARCHAR(255) NOT NULL,"
+            + "credits INTEGER NOT NULL,"
+            + "letter VARCHAR(3) NOT NULL,"
+            + "FOREIGN KEY(set_id) REFERENCES gpa_sets(set_id) ON DELETE CASCADE)";
 }

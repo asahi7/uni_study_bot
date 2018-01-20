@@ -79,7 +79,7 @@ public class Scheduler {
     }
 
     private static boolean canAddTimeSlot(int courseIndex, int optionIndex){
-        ArrayList<TimeSlotOptions> courseTime = (courses.get(courseIndex).getCourseTime());
+        List<TimeSlotOptions> courseTime = (courses.get(courseIndex).getCourseTime());
         HashMap<String, ArrayList<Time>> timeSlots = courseTime.get(optionIndex).getTimeSlots();
 
         for(String day: timeSlots.keySet()){

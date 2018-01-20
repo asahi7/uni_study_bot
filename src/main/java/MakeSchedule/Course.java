@@ -1,18 +1,36 @@
 package MakeSchedule;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class Course {
     private String courseName;
-    private ArrayList<TimeSlotOptions> courseTime;
+    private int credits;
+    private String letter;
+    private List<TimeSlotOptions> courseTime;
 
     public Course(){
         this.courseTime = new ArrayList<>();
     }
+    
+    public Course(String courseName, int credits){
+        this.courseName = courseName;
+        this.credits = credits;
+        this.courseTime = new ArrayList<>();
+    }
+    
+    public Course(String courseName, int credits, String letter){
+        this.courseName = courseName;
+        this.credits = credits;
+        this.letter = letter;
+        this.courseTime = new ArrayList<>();
+    }
+    
     public Course(String courseName, ArrayList<TimeSlotOptions> timeSlotOptions){
         this.courseName = courseName;
         this.courseTime = timeSlotOptions;
     }
+    
     public void addTimeSlotOption(TimeSlotOptions timeSlotOption) {
         courseTime.add(timeSlotOption);
     }
@@ -21,13 +39,20 @@ public class Course {
         this.courseTime.get(i).addTimeToTimeSlot(day, time);
     }
 
-
-    public ArrayList<TimeSlotOptions> getCourseTime() {
+    public List<TimeSlotOptions> getCourseTime() {
         return courseTime;
     }
 
     public String getCourseName() {
         return courseName;
+    }
+    
+    public int getCredits() {
+        return credits;
+    }
+    
+    public String getLetter() {
+        return letter;
     }
 
     public void setCourseName(String courseName) {
@@ -36,5 +61,13 @@ public class Course {
 
     public void setCourseTime(ArrayList<TimeSlotOptions> courseTime) {
         this.courseTime = courseTime;
+    }
+    
+    public void setCredits(int credits) {
+        this.credits = credits;
+    }
+    
+    public void setLetter(String letter) {
+        this.letter = letter;
     }
 }

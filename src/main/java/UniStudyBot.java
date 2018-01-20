@@ -10,6 +10,10 @@ import org.telegram.telegrambots.exceptions.TelegramApiException;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+
+import GpaCalculator.*;
+
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
 
 import java.util.logging.*;
@@ -22,6 +26,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 
+import MakeSchedule.Course;
 import MakeSchedule.Scheduler;
 
 import java.util.*;
@@ -40,6 +45,11 @@ public class UniStudyBot extends TelegramLongPollingBot
     private static final int DELETING_COURSE = 7;
     // Course Settings END
     private static final int GENERATING_NEW_SCHEDULE = 8;
+    private static final int CALCULATE_GPA = 6;
+    private static final int COUNT_GPA_NEW = 9;
+    private static final int COUNT_GPA_CURRENT = 10;
+    private static final int COUNTING_GPA_NEW = 11;
+    private static final int COUNTING_GPA_CURRENT = 12;
     
     public String getStateFromInt(int state) {
         String result = "";
@@ -62,11 +72,26 @@ public class UniStudyBot extends TelegramLongPollingBot
             case 5:
                 result = "ADDING_TIME";
                 break;
+            case 6:
+                result = "CALCULATE_GPA";
+                break;
             case 7:
                 result = "DELETING_COURSE";
                 break;       
             case 8:
                 result = "GENERATING_NEW_SCHEDULE";
+                break;
+            case 9:
+                result = "COUNT_GPA_NEW";
+                break;
+            case 10:
+                result = "COUNT_GPA_CURRENT";
+                break;
+            case 11:
+                result = "COUNTING_GPA_NEW";
+                break;
+            case 12:
+                result = "COUNTING_GPA_CURRENT";
                 break;
             default: 
                 result = "YOU FORGOT TO ADD DESCRIPTION OF THE COMMAND!";
@@ -90,6 +115,9 @@ public class UniStudyBot extends TelegramLongPollingBot
                 break;
             case "/view_courses":
                 sendMessage = viewCoursesSelected(message);
+                break;
+            case "/calculate_gpa":
+                sendMessage = calculateGpaSelected(message);
                 break;
             default:
                 sendMessage = null;
@@ -146,6 +174,21 @@ public class UniStudyBot extends TelegramLongPollingBot
                 case GENERATING_NEW_SCHEDULE:
                     sendMessage = onGeneratingNewSchedule(message);
                     break;
+                case CALCULATE_GPA:
+                    sendMessage = onCalculateGpa(message);
+                    break;
+                case COUNT_GPA_NEW:
+                    sendMessage = onSelectGpaScale(message);
+                    break;
+                case COUNT_GPA_CURRENT:
+                    sendMessage = onSelectGpaScale(message);
+                    break;
+                case COUNTING_GPA_NEW:
+                    sendMessage = onCountingGpaNew(message);
+                    break;
+                case COUNTING_GPA_CURRENT:
+                    sendMessage = onCountingGpaCurrent(message);
+                    break;
                 default:
                     sendMessage = onDefault(message);
                     break;
@@ -168,6 +211,17 @@ public class UniStudyBot extends TelegramLongPollingBot
     private void sendErrorMessage(String errorMessage, Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setReplyToMessageId(message.getMessageId()).setText(errorMessage);
+        sendMessage.setChatId(message.getChatId());
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private void sendInfoMessage(String infoMessage, Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText(infoMessage);
         sendMessage.setChatId(message.getChatId());
         try {
             execute(sendMessage);
@@ -224,7 +278,110 @@ public class UniStudyBot extends TelegramLongPollingBot
         else if(message.getText().equals("/view_courses")) {
             return viewCoursesSelected(message);
         }
+        else if(message.getText().equals("/calculate_gpa")) {
+            return calculateGpaSelected(message);
+        }
         return menuSelected(message);
+    }
+    
+    private SendMessage onCalculateGpa(Message message) {
+        if(message.getText().equals("/count_gpa_new")) {
+            return selectGpaScaleSelected(message);
+        } else if(message.getText().equals("/see_gpa_previous")) {
+            // TODO
+        } else if(message.getText().equals("/clear_gpa_data")) {
+            // TODO
+        } else if(message.getText().equals("/count_gpa_current")) {
+            return selectGpaScaleSelected(message); // TODO
+        } else if(message.getText().equals("/cancel")) {
+            cancelForceReply(message);
+            return menuSelected(message).setReplyToMessageId(null);
+        }
+        return calculateGpaSelected(message);
+    }
+    
+    private GpaCalculator getGpaCalculator(String gpaScale) {
+        GpaCalculator gpaCalculator = null;
+        if(gpaScale.equals("4.0")) {
+            gpaCalculator = new GpaFourZero();
+        } else if(gpaScale.equals("4.3")) {
+            gpaCalculator = new GpaFourThree();
+        } else if(gpaScale.equals("100%")) {
+            gpaCalculator = new GpaPercentage();
+        }
+        return gpaCalculator;
+    }
+    
+    private SendMessage onCountingGpaNew(Message message) {
+        if(message.getText().equals("/cancel")) {
+            cancelForceReply(message);
+            return calculateGpaSelected(message);
+        }
+        int gpa_sets = Database.getInstance().getNoOfGpaSets(message.getFrom().getId());
+        System.out.println("gpa_sets_no: " + gpa_sets); // DEBUG ONLY
+        if(gpa_sets > 10) {
+            sendErrorMessage("The limit for number of user sets is 10\nPlease delete your GPA countings", message);
+            return calculateGpaSelected(message);
+        }
+        GpaCalculator gpaCalculator = getGpaCalculator(message.getReplyToMessage().getText());
+        if(gpaCalculator == null) {
+            sendErrorMessage("You must not cancel the force reply", message); // TODO better error message
+            return calculateGpaSelected(message); // TODO maybe better return?
+        }
+        try {
+            Splitter splitter = Splitter.on(CharMatcher.whitespace()).trimResults().omitEmptyStrings();
+            List<String> courseInputs = splitter.splitToList(message.getText());
+            if(courseInputs.size() > 150) {
+                sendErrorMessage("The limit for number of courses is 150", message);
+                return calculateGpaSelected(message);
+            }
+            // TODO check the limits for courseInputs
+            List<Course> courses = new ArrayList<>();
+            for(int i = 0; i < courseInputs.size(); i++) {
+                Splitter splitter2 = Splitter.on(",").trimResults().omitEmptyStrings();
+                List<String> courseInput = splitter2.splitToList(courseInputs.get(i));
+                Course course = new Course();
+                course.setCourseName(courseInput.get(0));
+                course.setCredits(Integer.parseInt(courseInput.get(1)));
+                course.setLetter(courseInput.get(2));
+                courses.add(course);
+            }
+            gpaCalculator.setCourses(courses);
+            double gpa = gpaCalculator.calculate();
+            System.out.println(gpa); // DEBUG ONLY
+            Database.getInstance().saveGpaSet(message.getFrom().getId(), gpa, courses);
+            sendInfoMessage("Your overall GPA: " + gpa, message);
+            return calculateGpaSelected(message);
+        } catch(Exception e) { // TODO make an error format Exception
+            logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
+        }
+        return calculateGpaSelected(message);
+    }
+    
+    private SendMessage onCountingGpaCurrent(Message message) {
+        if(message.getText().equals("/cancel")) {
+            cancelForceReply(message);
+            return calculateGpaSelected(message);
+        }
+        return calculateGpaSelected(message);
+    }
+    
+    private SendMessage onSelectGpaScale(Message message) {
+        String text = message.getText();
+        if(! text.equals("4.0") && ! text.equals("4.3") && ! text.equals("100%")) {
+            return calculateGpaSelected(message);
+        } 
+        if (text.equals("/cancel")) {
+            cancelForceReply(message);
+            return calculateGpaSelected(message);
+        }
+        final int state = Database.getInstance().getState(message.getFrom().getId(), message.getChatId());
+        if(state == COUNT_GPA_NEW) {
+            return countingGpaNewSelected(message);
+        } else if(state == COUNT_GPA_CURRENT) {
+            return countingGpaCurrentSelected(message);
+        }
+        return calculateGpaSelected(message);
     }
     
     private SendMessage onCourseSettings(Message message) {
@@ -387,9 +544,54 @@ public class UniStudyBot extends TelegramLongPollingBot
         return null;
     }
     
+    private SendMessage selectGpaScaleSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Select the GPA scale");
+        sendMessage.setReplyMarkup(getGpaScaleKeyboard());
+        // sendMessage.setReplyToMessageId(message.getMessageId());
+        if(message.getText().equals("/count_gpa_current")) {
+            Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COUNT_GPA_CURRENT);
+        } else {
+            Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COUNT_GPA_NEW);
+        }
+        return sendMessage;
+    }
+    
+    private SendMessage countingGpaNewSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setReplyToMessageId(message.getMessageId());
+        String info = "Write a list of courses in the following format:\n"
+                + "COURSE_NAME,NUM_OF_CREDITS,LETTER_GRADE\n"
+                + "Example: Calculus,3,A Philosophy,3,B+\n"
+                + "Any whitespace characters between courses will do\n"
+                + "Or write /cancel to go to previous menu";
+        sendInfoMessage(info, message);
+        ForceReplyKeyboard forceReplyKeyboard = new ForceReplyKeyboard();
+        sendMessage.setReplyMarkup(forceReplyKeyboard).setText(message.getText());
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COUNTING_GPA_NEW);
+        return sendMessage;
+    }
+    
+    private SendMessage countingGpaCurrentSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setReplyToMessageId(message.getMessageId());
+        StringBuilder info = new StringBuilder("Write a letter grade for each of the following courses (in order):\n");
+        List<Course> courses = Database.getInstance().getAllCourseNameCredits(message.getFrom().getId());
+        for(int i = 0; i < courses.size(); i++) {
+            info.append(courses.get(i).getCourseName() + "\n");
+        }
+        info.append("Example: A+ B- B A+\n");
+        info.append("Or write /cancel to go to previous menu");
+        sendInfoMessage(info.toString(), message);
+        ForceReplyKeyboard forceReplyKeyboard = new ForceReplyKeyboard();
+        sendMessage.setReplyMarkup(forceReplyKeyboard).setText(message.getText());
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COUNTING_GPA_CURRENT);
+        return sendMessage;
+    }
+    
     private SendMessage viewCoursesSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
-        String courses = Database.getInstance().getAllCourses(message.getFrom().getId());
+        String courses = Database.getInstance().getAllCoursesAsString(message.getFrom().getId());
         if(courses == null) courses = "You don't have courses yet";
         sendMessage.setText(courses);
         final int state = Database.getInstance().getState(message.getFrom().getId(), message.getChatId());
@@ -476,6 +678,49 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), GENERATING_NEW_SCHEDULE);
         return sendMessage;
     }
+    
+    private ReplyKeyboardMarkup getCalculateGpaKeyboard() {
+        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
+        replyMarkup.setOneTimeKeyboard(true);
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        KeyboardRow keyboardRow = new KeyboardRow();
+        keyboardRow.add("/count_gpa_new");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/see_gpa_previous");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/count_gpa_current");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/clear_gpa_data");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/cancel");
+        keyboardRows.add(keyboardRow);
+        replyMarkup.setKeyboard(keyboardRows);
+        return replyMarkup;
+    }
+    
+    private ReplyKeyboardMarkup getGpaScaleKeyboard() {
+        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
+        replyMarkup.setOneTimeKeyboard(true);
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        KeyboardRow keyboardRow = new KeyboardRow();
+        keyboardRow.add("4.0");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("4.3");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("100%");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/cancel");
+        keyboardRows.add(keyboardRow);
+        replyMarkup.setKeyboard(keyboardRows);
+        return replyMarkup;
+    }
       
     private ReplyKeyboardMarkup getCourseSettingsKeyboard() {
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
@@ -497,14 +742,6 @@ public class UniStudyBot extends TelegramLongPollingBot
         return replyMarkup;
     }
     
-    private SendMessage courseSettingsSelected(Message message) {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setText("Select the menu item");
-        sendMessage.setReplyMarkup(getCourseSettingsKeyboard());
-        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COURSE_SETTINGS);
-        return sendMessage;
-    }
-    
     private ReplyKeyboardMarkup getMenuKeyboard() {
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
         replyMarkup.setOneTimeKeyboard(true);
@@ -518,8 +755,27 @@ public class UniStudyBot extends TelegramLongPollingBot
         keyboardRow = new KeyboardRow();
         keyboardRow.add("/generate_new_schedule");
         keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/calculate_gpa");
+        keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
         return replyMarkup;
+    }
+    
+    private SendMessage calculateGpaSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Select the menu item");
+        sendMessage.setReplyMarkup(getCalculateGpaKeyboard());
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), CALCULATE_GPA);
+        return sendMessage;
+    }
+    
+    private SendMessage courseSettingsSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Select the menu item");
+        sendMessage.setReplyMarkup(getCourseSettingsKeyboard());
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COURSE_SETTINGS);
+        return sendMessage;
     }
     
     private SendMessage menuSelected(Message message) {

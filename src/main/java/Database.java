@@ -1,5 +1,8 @@
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.*;
+import MakeSchedule.Course;;
 
 public class Database
 {
@@ -40,6 +43,10 @@ public class Database
             statement.executeUpdate(CreateTablesStrings.CREATE_TIMES_TABLE);
             logger.log(Level.INFO, "Creating (if not already) initial states table");
             statement.executeUpdate(CreateTablesStrings.CREATE_STATES_TABLE);
+            logger.log(Level.INFO, "Creating (if not already) initial gpa_sets table");
+            statement.executeUpdate(CreateTablesStrings.CREATE_GPA_SETS_TABLE);
+            logger.log(Level.INFO, "Creating (if not already) initial gpa_set_courses table");
+            statement.executeUpdate(CreateTablesStrings.CREATE_GPA_SET_COURSES_TABLE);
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Creation of initial tables was not successful", e);
         }
@@ -151,7 +158,75 @@ public class Database
         }
     }
     
-    public String getAllCourses(int userId) {
+    public List<Course> getAllCourseNameCredits(int userId) {
+        try(PreparedStatement statement = connection.prepareStatement("SELECT name,credits FROM courses"
+                + "WHERE user_id=? ORDER BY name ASC")) {
+            statement.setInt(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            List<Course> result = new ArrayList<>();
+            while(resultSet.next()) {
+                Course course = new Course(resultSet.getString("name"), resultSet.getInt("credits"));
+                result.add(course);
+            }
+            return result;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    public int getNoOfGpaSets(int userId) {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) as total FROM gpa_sets WHERE user_id=?")) {
+            statement.setInt(1, userId);
+            logger.log(Level.INFO, "Getting count of rows from gpa_sets table");
+            ResultSet resultSet = statement.executeQuery();
+            if(resultSet.next()) { 
+                return resultSet.getInt("total");
+            } else {
+                throw new SQLException("Couldn't select from gpa_sets, the next() returns false");
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error occurred while getting number of user gpa sets", e);
+        }
+        return -1;
+    }
+    
+    public void saveGpaSet(int userId, double gpa, List<Course> courses) {
+        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO gpa_sets(user_id,gpa) VALUES(?,?)", Statement.RETURN_GENERATED_KEYS)) 
+        {
+            statement.setInt(1, userId);
+            statement.setDouble(2, gpa);
+            logger.log(Level.INFO, "Inserting to the gpa_sets table");
+            int affectedRows = statement.executeUpdate();
+            if(affectedRows == 0) {
+                throw new SQLException("Cannot insert to gpa_sets, 0 rows affected");
+            }
+            ResultSet resultSet = statement.getGeneratedKeys();
+            if(resultSet.next()) {
+                int setId = resultSet.getInt(1); // TODO make as a transaction
+                try (PreparedStatement statement2 = connection.prepareStatement("INSERT INTO gpa_set_courses(set_id,name,credits,letter) VALUES(?,?,?,?)")) {
+                    for(int i = 0; i < courses.size(); i++) {
+                        statement2.setInt(1, setId);
+                        statement2.setString(2, courses.get(i).getCourseName());
+                        statement2.setInt(3, courses.get(i).getCredits());
+                        statement2.setString(4, courses.get(i).getLetter());
+                        int affectedRows2 = statement2.executeUpdate();
+                        if(affectedRows2 == 0) {
+                            throw new SQLException("Cannot insert to gpa_set_courses, 0 rows affected");
+                        }
+                    }
+                } catch (SQLException e) {
+                    throw new SQLException("Failed to insert into gpa_set_courses. Error occurred.");
+                }
+            } else {
+                throw new SQLException("Creating row in gpa_sets failed, no set_id obtained");
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error occurred saving GPA sets", e);
+        }
+    }
+    
+    public String getAllCoursesAsString(int userId) {
         try(PreparedStatement statement = connection.prepareStatement("SELECT courses.*,times.day,times.start_time,times.end_time FROM `courses` LEFT JOIN"
                 + " `times` on courses.name=times.name and courses.user_id=times.user_id WHERE courses.user_id=? ORDER BY name ASC")) {
             statement.setInt(1, userId);
@@ -167,10 +242,6 @@ public class Database
                     sb.append(resultSet.getString("name") + "\nCredits: " + resultSet.getString("credits") + "\n");
                     if(resultSet.getString("professor") != null) sb.append("Professor: " + resultSet.getString("professor") + "\n");
                     if(resultSet.getString("room") != null) sb.append("Room: " + resultSet.getString("room") + "\n");
-                    if(resultSet.getString("letter") != null) sb.append("Letter: " + resultSet.getString("letter") + "\n");
-                    if(resultSet.getString("four_zero") != null) sb.append("4.0: " + resultSet.getString("four_zero") + "\n");
-                    if(resultSet.getString("four_three") != null) sb.append("4.3: " + resultSet.getString("four_three") + "\n");
-                    if(resultSet.getString("percentage") != null) sb.append("%:" + resultSet.getString("percentage") + "\n");
                 }
                 if(resultSet.getString("day") != null) {
                     sb.append(resultSet.getString("day") + ", " + resultSet.getString("start_time").substring(0, 5) + " - "
