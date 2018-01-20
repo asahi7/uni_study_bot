@@ -35,8 +35,39 @@ public class Course {
         courseTime.add(timeSlotOption);
     }
 
-    public void addToTimeSlotOption(int i, String day, Time time) {
-        this.courseTime.get(i).addTimeToTimeSlot(day, time);
+    public Course (String course){
+
+        StringBuilder record = new StringBuilder();
+        String records[] = course.split("[ ]+");
+        for(int i=0;i< records.length;i++){
+            record.append(records[i]);
+        }
+        course = record.toString();
+        String delims = "[:]+";
+        String[] tokens = course.split(delims,2);
+        String courseName = tokens[0];
+        ArrayList<TimeSlotOptions> courseTime= new ArrayList<>();
+
+        String timeSlotDelims = "[()]+";
+        String[] timeSlotsOptions = tokens[1].split(timeSlotDelims);
+
+        for(int i = 0; i<timeSlotsOptions.length; i++){
+            TimeSlotOptions timeSlotOptions = new TimeSlotOptions(timeSlotsOptions[i]);
+            if(timeSlotOptions.getTimeSlots().size()>0){
+                courseTime.add(new TimeSlotOptions(timeSlotsOptions[i]));
+            }
+        }
+
+        this.courseName = courseName;
+        this.courseTime = courseTime;
+    }
+
+    public String courseToString(int timeSlotOption){
+        Course course = this;
+        StringBuilder str = new StringBuilder(course.getCourseName());
+        str.append(":");
+        str.append((course.getCourseTime().get(timeSlotOption).getTimeSlotOptionString()));
+        return str.toString();
     }
 
     public List<TimeSlotOptions> getCourseTime() {
