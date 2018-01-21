@@ -31,8 +31,10 @@ import java.time.DayOfWeek;
 
 import MakeSchedule.Course;
 import MakeSchedule.Scheduler;
+import Objects.GpaSet;
 
 import java.util.*;
+import static Objects.Keyboards.*;
 
 public class UniStudyBot extends TelegramLongPollingBot
 {   
@@ -278,12 +280,14 @@ public class UniStudyBot extends TelegramLongPollingBot
         if(message.getText().equals("/count_gpa_new")) {
             return selectGpaScaleSelected(message);
         } else if(message.getText().equals("/see_gpa_previous")) {
-            // TODO
+            return seeGpaPreviousSelected(message);
         } else if(message.getText().equals("/clear_gpa_data")) {
-            // TODO
+            return clearGpaDataSelected(message); 
         } else if(message.getText().equals("/count_gpa_current")) {
             return selectGpaScaleSelected(message); // TODO
-        } 
+        } else if(message.getText().equals("/delete_gpa_set")) {
+            // TODO
+        }
         return calculateGpaSelected(message);
     }
     
@@ -360,7 +364,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             gpaCalculator.setCourses(courses);
             double gpa = gpaCalculator.calculate();
             System.out.println(gpa); // DEBUG ONLY
-            Database.getInstance().saveGpaSet(message.getFrom().getId(), gpa, courses);
+            Database.getInstance().saveGpaSet(message.getFrom().getId(), gpa, message.getReplyToMessage().getText(), courses);
             sendInfoMessage("Your overall GPA: " + gpa, message);
             return calculateGpaSelected(message);
         } catch(Exception e) { // TODO make an error format Exception
@@ -402,7 +406,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             gpaCalculator.setCourses(courses);
             double gpa = gpaCalculator.calculate();
             System.out.println(gpa); // DEBUG ONLY
-            Database.getInstance().saveGpaSet(message.getFrom().getId(), gpa, courses);
+            Database.getInstance().saveGpaSet(message.getFrom().getId(), gpa, message.getReplyToMessage().getText(), courses);
             sendInfoMessage("Your overall GPA: " + gpa, message);
             return calculateGpaSelected(message);
         } catch(Exception e) { // TODO make an error format Exception
@@ -632,6 +636,37 @@ public class UniStudyBot extends TelegramLongPollingBot
         return sendMessage;
     }
     
+    private SendMessage clearGpaDataSelected(Message message) { // TODO are you sure button?
+        SendMessage sendMessage = new SendMessage();
+        Database.getInstance().clearGpaData(message.getFrom().getId());
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), CALCULATE_GPA);
+        sendMessage.setText("Your GPA sets have been successfully deleted").setReplyMarkup(getCalculateGpaKeyboard());
+        return sendMessage;
+    }
+    
+    private SendMessage seeGpaPreviousSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        List<GpaSet> gpaSets = Database.getInstance().getGpaSets(message.getFrom().getId());
+        String result;
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0; i < gpaSets.size(); i++) {
+            GpaSet gpaSet = gpaSets.get(i);
+            sb.append("{\n");
+            for(int j = 0; j < gpaSet.getCourses().size(); j++) {
+                Course course = gpaSet.getCourses().get(j);
+                sb.append(course.getCourseName() + "," + course.getCredits() + "," + course.getLetter() + "\n");
+            }
+            sb.append("} setID: " + gpaSet.getSetId() + ", GPA: " + gpaSet.getGpa() + "/" + gpaSet.getGpaScale() + "\n\n");
+        }
+        result = sb.toString();
+        if(gpaSets.isEmpty()) {
+            result = "You don't have any GPA sets yet";
+        }
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), CALCULATE_GPA);
+        sendMessage.setText(result).setReplyMarkup(getCalculateGpaKeyboard());
+        return sendMessage;
+    }
+    
     private SendMessage viewCoursesSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         String courses = Database.getInstance().getAllCoursesAsString(message.getFrom().getId());
@@ -678,17 +713,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     
     private SendMessage addTimeSelected(Message message, String courseName) {
         SendMessage sendMessage = new SendMessage();
-        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
-        replyMarkup.setOneTimeKeyboard(true);
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("/add_time " + courseName);
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/cancel");
-        keyboardRows.add(keyboardRow);
-        replyMarkup.setKeyboard(keyboardRows);
-        sendMessage.setReplyMarkup(replyMarkup);
+        sendMessage.setReplyMarkup(getAddTimeKeyboard(courseName));
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADD_TIME);
         return sendMessage;
     }
@@ -724,89 +749,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         return sendMessage;
     }
     
-    private ReplyKeyboardMarkup getCalculateGpaKeyboard() {
-        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
-        replyMarkup.setOneTimeKeyboard(true);
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("/count_gpa_new");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/count_gpa_current");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/see_gpa_previous");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/clear_gpa_data");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/cancel");
-        keyboardRows.add(keyboardRow);
-        replyMarkup.setKeyboard(keyboardRows);
-        return replyMarkup;
-    }
-    
-    private ReplyKeyboardMarkup getGpaScaleKeyboard() {
-        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
-        replyMarkup.setOneTimeKeyboard(true);
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("4.0");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("4.3");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("100%");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/cancel");
-        keyboardRows.add(keyboardRow);
-        replyMarkup.setKeyboard(keyboardRows);
-        return replyMarkup;
-    }
-      
-    private ReplyKeyboardMarkup getCourseSettingsKeyboard() {
-        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
-        replyMarkup.setOneTimeKeyboard(true);
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("/add_course");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/delete_course");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/view_courses");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/cancel");
-        keyboardRows.add(keyboardRow);
-        replyMarkup.setKeyboard(keyboardRows);
-        return replyMarkup;
-    }
-    
-    private ReplyKeyboardMarkup getMenuKeyboard() {
-        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
-        replyMarkup.setOneTimeKeyboard(true);
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("/course_settings");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/view_courses");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/generate_new_schedule");
-        keyboardRows.add(keyboardRow);
-        keyboardRow = new KeyboardRow();
-        keyboardRow.add("/calculate_gpa");
-        keyboardRows.add(keyboardRow);
-        replyMarkup.setKeyboard(keyboardRows);
-        return replyMarkup;
-    }
-    
+        
     private SendMessage calculateGpaSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Select the menu item");

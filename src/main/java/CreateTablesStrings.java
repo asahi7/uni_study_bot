@@ -36,6 +36,8 @@ public class CreateTablesStrings
             + "user_id INTEGER NOT NULL,"
             + "set_id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,"
             + "gpa DECIMAL(3,2) NOT NULL,"
+            + "gpa_scale VARCHAR(5) NOT NULL,"
+            + "created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             + "FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)";
     public final static String CREATE_GPA_SET_COURSES_TABLE = "CREATE TABLE IF NOT EXISTS gpa_set_courses ("
             + "set_id INTEGER NOT NULL,"

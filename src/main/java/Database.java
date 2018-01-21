@@ -2,7 +2,8 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.*;
-import MakeSchedule.Course;;
+import MakeSchedule.Course;
+import Objects.GpaSet;;
 
 public class Database
 {
@@ -191,11 +192,22 @@ public class Database
         return -1;
     }
     
-    public void saveGpaSet(int userId, double gpa, List<Course> courses) {
-        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO gpa_sets(user_id,gpa) VALUES(?,?)", Statement.RETURN_GENERATED_KEYS)) 
+    public void clearGpaData(int userId) {
+        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM gpa_sets WHERE user_id=?")){
+            statement.setInt(1, userId);
+            statement.execute();
+            logger.log(Level.INFO, "Deleting courses from gpa_sets table");
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error occurred while deleting data from gpa_sets table", e);
+        }
+    }
+    
+    public void saveGpaSet(int userId, double gpa, String gpaScale, List<Course> courses) { // TODO pass GpaSet object
+        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO gpa_sets(user_id,gpa,gpa_scale) VALUES(?,?,?)", Statement.RETURN_GENERATED_KEYS)) 
         {
             statement.setInt(1, userId);
             statement.setDouble(2, gpa);
+            statement.setString(3, gpaScale);
             logger.log(Level.INFO, "Inserting to the gpa_sets table");
             int affectedRows = statement.executeUpdate();
             if(affectedRows == 0) {
@@ -224,6 +236,43 @@ public class Database
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error occurred saving GPA sets", e);
         }
+    }
+    
+    public List<GpaSet> getGpaSets(int userId) { // TODO delete old timestamps 365 days
+        List<GpaSet> gpaSets = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement("SELECT gpa_sets.*,name,credits,letter FROM gpa_sets LEFT JOIN "
+                + "gpa_set_courses on gpa_set_courses.set_id=gpa_sets.set_id WHERE gpa_sets.user_id=? ORDER BY gpa_sets.set_id", 
+                ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)) {
+            statement.setInt(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            while(resultSet.next()) {
+                int setId = resultSet.getInt("set_id");
+                GpaSet gpaSet = new GpaSet();
+                gpaSet.setGpa(resultSet.getDouble("gpa"));
+                gpaSet.setSetId(setId);
+                gpaSet.setTimestamp(resultSet.getTimestamp("created"));
+                gpaSet.setGpaScale(resultSet.getString("gpa_scale"));
+                List<Course> courses = new ArrayList<>();
+                resultSet.previous();
+                while(resultSet.next()) {
+                    if(setId != resultSet.getInt("set_id")) {
+                        resultSet.previous();
+                        break;
+                    }
+                    Course course = new Course();
+                    course.setCourseName(resultSet.getString("name"));
+                    course.setCredits(resultSet.getInt("credits"));
+                    course.setLetter(resultSet.getString("letter"));
+                    courses.add(course);
+                }
+                gpaSet.setCourses(courses);
+                gpaSets.add(gpaSet);
+            }
+            return gpaSets;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return gpaSets;
     }
     
     public String getAllCoursesAsString(int userId) {
