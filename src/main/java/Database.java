@@ -159,7 +159,7 @@ public class Database
     }
     
     public List<Course> getAllCourseNameCredits(int userId) {
-        try(PreparedStatement statement = connection.prepareStatement("SELECT name,credits FROM courses"
+        try(PreparedStatement statement = connection.prepareStatement("SELECT name,credits FROM courses "
                 + "WHERE user_id=? ORDER BY name ASC")) {
             statement.setInt(1, userId);
             ResultSet resultSet = statement.executeQuery();

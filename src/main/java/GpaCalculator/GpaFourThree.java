@@ -14,7 +14,7 @@ public class GpaFourThree extends GpaCalculator
         super(courses);
     }
     
-    public double calculate()
+    public double calculate() // TODO make conversion from 4.0 to 4.3 more exact
     {
         double sum = 0.0;
         int sumCredits = 0; 
