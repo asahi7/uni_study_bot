@@ -2,14 +2,11 @@ import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.api.objects.replykeyboard.ForceReplyKeyboard;
-import org.telegram.telegrambots.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.api.objects.replykeyboard.ReplyKeyboardRemove;
-import org.telegram.telegrambots.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 
 import com.google.common.base.Splitter;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 
 import GpaCalculator.*;
@@ -20,13 +17,7 @@ import com.google.common.base.Preconditions;
 import java.util.logging.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.naming.spi.DirStateFactory.Result;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.sql.SQLException;
 import java.time.DayOfWeek;
 
 import MakeSchedule.Course;
@@ -55,6 +46,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     private static final int COUNT_GPA_CURRENT = 10;
     private static final int COUNTING_GPA_NEW = 11;
     private static final int COUNTING_GPA_CURRENT = 12;
+    private static final int DELETE_GPA_SET = 13;
     
     public String getStateFromInt(int state) {
         String result = "";
@@ -97,6 +89,9 @@ public class UniStudyBot extends TelegramLongPollingBot
                 break;
             case 12:
                 result = "COUNTING_GPA_CURRENT";
+                break;
+            case 13:
+                result = "DELETE_GPA_SET";
                 break;
             default: 
                 result = "YOU FORGOT TO ADD DESCRIPTION OF THE COMMAND!";
@@ -176,7 +171,7 @@ public class UniStudyBot extends TelegramLongPollingBot
                 case ADDING_TIME:
                     sendMessage = onAddingTime(message);
                     break;
-                case DELETING_COURSE: // TODO
+                case DELETING_COURSE:
                     sendMessage = onDeletingCourse(message);
                     break;
                 case GENERATING_NEW_SCHEDULE:
@@ -196,6 +191,9 @@ public class UniStudyBot extends TelegramLongPollingBot
                     break;
                 case COUNTING_GPA_CURRENT:
                     sendMessage = onCountingGpaCurrent(message);
+                    break;
+                case DELETE_GPA_SET:
+                    sendMessage = onDeleteGpaSet(message);
                     break;
                 default:
                     sendMessage = onDefault(message);
@@ -284,9 +282,9 @@ public class UniStudyBot extends TelegramLongPollingBot
         } else if(message.getText().equals("/clear_gpa_data")) {
             return clearGpaDataSelected(message); 
         } else if(message.getText().equals("/count_gpa_current")) {
-            return selectGpaScaleSelected(message); // TODO
+            return selectGpaScaleSelected(message);
         } else if(message.getText().equals("/delete_gpa_set")) {
-            // TODO
+            return deleteGpaSetSelected(message);
         }
         return calculateGpaSelected(message);
     }
@@ -337,6 +335,25 @@ public class UniStudyBot extends TelegramLongPollingBot
             return toSend.setReplyToMessageId(null);
         }
         return null;
+    }
+    
+    private SendMessage onDeleteGpaSet(Message message) {
+        SendMessage cancelMessage = cancelSelected(message, calculateGpaSelected(message));
+        if(cancelMessage != null) return cancelMessage;
+        try {
+            Splitter splitter = Splitter.on(CharMatcher.whitespace()).trimResults().omitEmptyStrings();
+            List<String> inputString = splitter.splitToList(message.getText());
+            List<Integer> setIds = new ArrayList<>();
+            for(int i = 0; i < inputString.size(); i++) {
+                setIds.add(Integer.parseInt(inputString.get(i)));
+            }
+            Database.getInstance().deleteGpaSets(setIds);
+            sendInfoMessage("You have successfully deleted GPA sets", message);
+        } catch (NumberFormatException e) {
+            logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
+            sendErrorMessage("Error occurred. Please, try again", message);
+        }
+        return calculateGpaSelected(message);
     }
     
     private SendMessage onCountingGpaNew(Message message) {
@@ -585,6 +602,16 @@ public class UniStudyBot extends TelegramLongPollingBot
             return addingTimeSelected(message);
         } 
         return null;
+    }
+    
+    private SendMessage deleteGpaSetSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Input setID of a set which you want to delete\n"
+                + "You may add several of them\n"
+                + "Example: 1 2 3 4\n"
+                + "Or write /cancel to go to previous menu");
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), DELETE_GPA_SET);
+        return sendMessage;
     }
     
     private SendMessage selectGpaScaleSelected(Message message) {

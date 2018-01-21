@@ -192,11 +192,26 @@ public class Database
         return -1;
     }
     
+    public void deleteGpaSets(List<Integer> setIds) {
+        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM gpa_sets WHERE set_id=?")){
+            connection.setAutoCommit(false);
+            for(int i = 0; i < setIds.size(); i++) {
+                statement.setInt(1, setIds.get(i));
+                statement.execute();
+            }
+            connection.commit();
+            connection.setAutoCommit(true);
+            logger.log(Level.INFO, "Deleting gpa_sets");
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error occurred while deleting data from gpa_sets table", e);
+        }
+    }
+    
     public void clearGpaData(int userId) {
         try (PreparedStatement statement = connection.prepareStatement("DELETE FROM gpa_sets WHERE user_id=?")){
             statement.setInt(1, userId);
             statement.execute();
-            logger.log(Level.INFO, "Deleting courses from gpa_sets table");
+            logger.log(Level.INFO, "Deleting from gpa_sets table");
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error occurred while deleting data from gpa_sets table", e);
         }
