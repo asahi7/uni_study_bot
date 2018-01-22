@@ -1,6 +1,9 @@
 package MakeSchedule;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.lang3.tuple.Pair;
 
 public class Scheduler {
@@ -33,13 +36,106 @@ public class Scheduler {
     }
 
     public static String doWork(String input){
-        ArrayList<Course> newCourses = convertToCourses(input);
-        setCourses(newCourses);
-        combineCourses(0);
-        return showSchedule();
+    	if(checkInput(input)){
+    		ArrayList<Course> newCourses = convertToCourses(input);
+    		setCourses(newCourses);
+    		combineCourses(0);
+        	if(showSchedule().length() >0){
+        		return showSchedule();
+        	}
+        }
+       return"No schedule for these courses can be constructed. Delete or change a course";
+    }
+    
+    public static boolean checkInput(String input){
+    	
+    	/* Delete whitespaces */
+    	StringBuilder record = new StringBuilder();
+        String records[] = input.split("[ ]+");
+        for(int i=0;i< records.length;i++){
+            record.append(records[i]);
+        }
+        input = record.toString();
+        /* Delete whitespaces */
+        
+        /* Extract lines */
+        String delim1 = "[\n]";
+        String[] lines = input.split(delim1);
+        boolean answer = true;
+        /* Nothing in input */
+        if(!(lines.length>0)){
+    		return false;
+    	}
+        /*//Nothing in input */
+        /*//Extract lines */
+        
+        /* Extract Name and Timeslots */
+        for(int l = 0; l < lines.length; l++){
+        	String delim2 = "[:]";
+            String[]  timeSlots = lines[l].split(delim2,2);
+            /* Incorrect "name:timeslot" format */
+            if(timeSlots.length != 2){
+            	//System.out.println(" Incorrect name-timeslot format");
+                return false;
+            }
+            /*//Incorrect "name:timeslot" format */
+            
+            /* Extract timeslots */
+            String timeSlotDelims = "[()]+";
+            String[] timeSlotsOptions = timeSlots[1].split(timeSlotDelims);
+            /* no timeslots */
+            if(!(timeSlotsOptions.length>0)){
+            	//System.out.println("no timeslots");
+            	return false;
+            }
+            /*//no timeslots */
+            
+            for(int j = 0; j< timeSlotsOptions.length; j++){
+            	if(timeSlotsOptions[j].length()==0){
+            		continue;
+            	}
+            	String delim3 = "[,]+";
+                String[] timeRecords = timeSlotsOptions[j].split(delim3);
+                /* no timeRecord is present in timeslot */
+                if(!(timeRecords.length>0)){
+                	//System.out.println(" no timeRecord is present in timeslot");
+                    return false;
+                 }
+                /*//no timeRecord is present in timeslot */
+                for(int k = 0; k<timeRecords.length; k++){
+                	String time = timeRecords[k]; 
+                	/* too short time record */
+                	if(!(time.length()>9)) {
+                		//System.out.println("  too short time record: "+time);
+                		// shortest timeRecord is 10 characters long (a1:00-1:01) 
+                		 return false;
+                	}
+                	/*//too short time record */
+                	Pattern pattern = Pattern.compile("([01]?[0-9]|2[0-3]):[0-5][0-9]-([01]?[0-9]|2[0-3]):[0-5][0-9]");
+                    Matcher matcher = pattern.matcher(time);
+                    /* Incorrect time format */
+                    if (!(matcher.find())) {
+                    	//System.out.println("Incorrect time format");
+                    	return false;
+                    }
+                    /*//Incorrect time format */
+                 }
+            }
+             /*//Extract timeslots */
+        }
+        /*//Extract Name and Timeslots */
+        return true; 
     }
 
     public static ArrayList<Course> convertToCourses(String record){
+    	
+        StringBuilder newrecord = new StringBuilder();
+        String records[] = record.split("[ ]+");
+        for(int i=0;i< records.length;i++){
+            newrecord.append(records[i]);
+        }
+        record = newrecord.toString();
+        
         ArrayList<Course> courses = new ArrayList<>();
         String delims = "[\n]";
         String[] tokens = record.split(delims);
@@ -150,7 +246,7 @@ public class Scheduler {
                 int optionIndex = courseCombinations.get(i).get(j).getValue();
                 mySchedule.append((courses.get(courseIndex).courseToString(optionIndex))+"\n");
             }
-            mySchedule.append("\n");
+           // mySchedule.append("\n");
         }
 
         return mySchedule.toString();

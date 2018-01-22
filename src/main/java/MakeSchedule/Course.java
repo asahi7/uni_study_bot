@@ -37,12 +37,6 @@ public class Course {
 
     public Course (String course){
 
-        StringBuilder record = new StringBuilder();
-        String records[] = course.split("[ ]+");
-        for(int i=0;i< records.length;i++){
-            record.append(records[i]);
-        }
-        course = record.toString();
         String delims = "[:]+";
         String[] tokens = course.split(delims,2);
         String courseName = tokens[0];
