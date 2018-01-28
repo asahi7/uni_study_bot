@@ -8,32 +8,9 @@ import org.apache.commons.lang3.tuple.Pair;
 
 public class Scheduler {
 
-    // TODO : startTime>endTime case like saturday 23:30 - sunday 00:30
-
     private static ArrayList<Course> courses = new ArrayList<>();
-    private static ArrayList<Pair<Integer, Integer>> combination = new ArrayList<>();
-    private static ArrayList<ArrayList<Pair<Integer, Integer>>> courseCombinations = new ArrayList<>();
-    private static BitSet mainBitSet = new BitSet();
-
-    private static int countMinutesInDay(String day){
-        switch (day){
-            case "Monday":
-                return 0;
-            case "Tuesday":
-                return 1440;
-            case "Wednesday":
-                return 2880;
-            case "Thursday":
-                return 4320;
-            case "Friday":
-                return 5760;
-            case "Saturday":
-                return 7200;
-            case "Sunday":
-                return 8640;
-        }
-        return 0;
-    }
+    private static ArrayList<Pair<Course, Integer> > courseCombination = new ArrayList<>();
+    private static ArrayList<ArrayList<Pair<Course, Integer> > > courseCombinations = new ArrayList<>();
 
     public static String doWork(String input){
     	if(checkInput(input)){
@@ -46,9 +23,103 @@ public class Scheduler {
         }
        return"No schedule for these courses can be constructed. Delete or change a course";
     }
-    
+
+    public static ArrayList<Course> convertToCourses(String record){
+
+        StringBuilder newrecord = new StringBuilder();
+        String records[] = record.split("[ ]+");
+        for(int i=0;i< records.length;i++){
+            newrecord.append(records[i]);
+        }
+        record = newrecord.toString();
+
+        ArrayList<Course> courses = new ArrayList<>();
+        String delims = "[\n]";
+        String[] tokens = record.split(delims);
+        for(int i = 0; i<tokens.length;i++){
+            Course newcourse = new Course(tokens[i]);
+            courses.add(newcourse);
+        }
+        return courses;
+    }
+
+    private static void setCourses(ArrayList<Course> newCourses){
+    	courseCombination.clear();
+    	courseCombinations.clear();
+        courses.clear();
+        courses = newCourses;
+    }
+
+    private static void combineCourses(int courseIndex){
+        if(courseIndex == courses.size()){
+        	addCombinationToSchedule();
+        }
+        else{
+            for(int optionIndex = 0; optionIndex < courses.get(courseIndex).getCourseTime().size(); optionIndex++){
+            	Course course = courses.get(courseIndex);
+                if(canAddTimeSlot(course,optionIndex)){
+                    courseCombination.add(Pair.of(course,optionIndex));
+                    combineCourses(courseIndex+1);
+                    courseCombination.remove(Pair.of(course,optionIndex));
+                }
+            }
+        }
+    }
+
+    private static void addCombinationToSchedule(){
+    	ArrayList<Pair<Course, Integer> > newCourseCombination = new ArrayList<>(courseCombination);
+    	 courseCombinations.add(newCourseCombination);
+
+    }
+
+    private static boolean canAddTimeSlot(Course course,int optionIndex){
+    	boolean ans = true;
+    	HashMap<String, ArrayList<Time>> timeSlots = course.getCourseTime().get(optionIndex).getTimeSlots();
+    	for(int c = 0; c<courseCombination.size(); c++){
+    		Course comparedCourse = courseCombination.get(c).getKey();
+    		int comparedCourseOption =  courseCombination.get(c).getValue();
+    		for(String day: timeSlots.keySet()){
+    			if(comparedCourse.getCourseTime().get(comparedCourseOption).getTimeSlots().containsKey(day) ){
+    				 ArrayList<Time> courseTimes = course.getCourseTime().get(optionIndex).getTimeSlots().get(day);
+    				 ArrayList<Time> comparedCourseTimes = comparedCourse.getCourseTime().get(comparedCourseOption).getTimeSlots().get(day);
+    				 for(int timeIndex = 0; timeIndex < courseTimes.size(); timeIndex++){
+    					 Time courseTime = courseTimes.get(timeIndex);
+
+    					 if(!(courseTime.getStartTime()<=courseTime.getEndTime())){
+    						 return false;
+    					 }
+
+    					 for(int comparedTimeIndex = 0; comparedTimeIndex < comparedCourseTimes.size(); comparedTimeIndex++){
+        					 Time comparedCourseTime = comparedCourseTimes.get(comparedTimeIndex);
+        					 if(comparedCourseTime.getStartTime()>=courseTime.getEndTime()){}
+        					 else if(comparedCourseTime.getEndTime()<=courseTime.getStartTime()){}
+        					 else{
+        						 return false;
+        					 }
+        				 }
+    				 }
+    			}
+    		}
+
+    	}
+
+    	return ans;
+    }
+
+    private static String showSchedule(){
+        StringBuilder mySchedule = new StringBuilder();
+        for(int i = 0; i<courseCombinations.size();i++){
+            mySchedule.append("~"+"\n");
+            for(int j = 0; j<courseCombinations.get(i).size();j++){
+                Course course = courseCombinations.get(i).get(j).getKey();
+                int optionIndex = courseCombinations.get(i).get(j).getValue();
+               mySchedule.append((course.courseToString(optionIndex))+"\n");
+            }
+        }
+        return mySchedule.toString();
+    }
+
     public static boolean checkInput(String input){
-    	
     	/* Delete whitespaces */
     	StringBuilder record = new StringBuilder();
         String records[] = input.split("[ ]+");
@@ -57,7 +128,7 @@ public class Scheduler {
         }
         input = record.toString();
         /* Delete whitespaces */
-        
+
         /* Extract lines */
         String delim1 = "[\n]";
         String[] lines = input.split(delim1);
@@ -68,7 +139,7 @@ public class Scheduler {
     	}
         /*//Nothing in input */
         /*//Extract lines */
-        
+
         /* Extract Name and Timeslots */
         for(int l = 0; l < lines.length; l++){
         	String delim2 = "[:]";
@@ -79,7 +150,7 @@ public class Scheduler {
                 return false;
             }
             /*//Incorrect "name:timeslot" format */
-            
+
             /* Extract timeslots */
             String timeSlotDelims = "[()]+";
             String[] timeSlotsOptions = timeSlots[1].split(timeSlotDelims);
@@ -89,7 +160,7 @@ public class Scheduler {
             	return false;
             }
             /*//no timeslots */
-            
+
             for(int j = 0; j< timeSlotsOptions.length; j++){
             	if(timeSlotsOptions[j].length()==0){
             		continue;
@@ -103,11 +174,11 @@ public class Scheduler {
                  }
                 /*//no timeRecord is present in timeslot */
                 for(int k = 0; k<timeRecords.length; k++){
-                	String time = timeRecords[k]; 
+                	String time = timeRecords[k];
                 	/* too short time record */
                 	if(!(time.length()>9)) {
                 		//System.out.println("  too short time record: "+time);
-                		// shortest timeRecord is 10 characters long (a1:00-1:01) 
+                		// shortest timeRecord is 10 characters long (a1:00-1:01)
                 		 return false;
                 	}
                 	/*//too short time record */
@@ -124,131 +195,7 @@ public class Scheduler {
              /*//Extract timeslots */
         }
         /*//Extract Name and Timeslots */
-        return true; 
-    }
-
-    public static ArrayList<Course> convertToCourses(String record){
-    	
-        StringBuilder newrecord = new StringBuilder();
-        String records[] = record.split("[ ]+");
-        for(int i=0;i< records.length;i++){
-            newrecord.append(records[i]);
-        }
-        record = newrecord.toString();
-        
-        ArrayList<Course> courses = new ArrayList<>();
-        String delims = "[\n]";
-        String[] tokens = record.split(delims);
-        for(int i = 0; i<tokens.length;i++){
-            Course newcourse = new Course(tokens[i]);
-            courses.add(newcourse);
-        }
-        return courses;
-    }
-
-
-    public static ArrayList<ArrayList<Pair<Integer, Integer> >> getCourseCombinationsList(ArrayList<Course> newCourses) {
-        setCourses(newCourses);
-        combineCourses(0);
-        return courseCombinations;
-    }
-
-    private static void setCourses(ArrayList<Course> newCourses){
-        combination.clear();
-        courseCombinations.clear();
-        mainBitSet.clear();
-        courses.clear();
-        courses = newCourses;
-    }
-
-    private static void combineCourses(int courseIndex){
-        if(courseIndex == courses.size()){
-            addCombinationToSchedule();
-            mainBitSet.clear();
-        }
-        else{
-            for(int optionIndex = 0; optionIndex < courses.get(courseIndex).getCourseTime().size(); optionIndex++){
-                if(canAddTimeSlot(courseIndex,optionIndex )){
-                    //combination.add(new Pair(courseIndex,optionIndex));
-                    combination.add(Pair.of(courseIndex,optionIndex));
-                    combineCourses(courseIndex+1);
-                    //combination.remove(new Pair(courseIndex,optionIndex));
-                    combination.remove(Pair.of(courseIndex,optionIndex));
-                }
-            }
-        }
-    }
-
-    private static boolean canAddTimeSlot(int courseIndex, int optionIndex){
-        List<TimeSlotOptions> courseTime = (courses.get(courseIndex).getCourseTime());
-        HashMap<String, ArrayList<Time>> timeSlots = courseTime.get(optionIndex).getTimeSlots();
-
-        for(String day: timeSlots.keySet()){
-                if(!checkTimes(courseIndex, optionIndex, day)){
-                    return false;
-                }
-        }
-
         return true;
     }
 
-    private static int getStartTime(int courseIndex, int optionIndex, String day, int t){
-        Time time = courses.get(courseIndex).getCourseTime().get(optionIndex).getTimeSlots().get(day).get(t);
-        int startTime = countMinutesInDay(day) + time.getStartTime();
-        return startTime;
-    }
-
-    private static int getEndTime(int courseIndex, int optionIndex, String day, int t){
-        Time time = courses.get(courseIndex).getCourseTime().get(optionIndex).getTimeSlots().get(day).get(t);
-        int endTime = countMinutesInDay(day) + time.getEndTime();
-        return endTime;
-    }
-
-    private static boolean checkTimes(int courseIndex, int optionIndex, String day){
-        ArrayList<Time> times = courses.get(courseIndex).getCourseTime().get(optionIndex).getTimeSlots().get(day);
-        boolean checkTime = true;
-        int backTime = 0, backMinute = 1;
-        for(int time = 0; time < times.size(); time++){
-            if(checkTime){
-                int startTime = getStartTime(courseIndex, optionIndex, day, time);
-                int endTime = getEndTime(courseIndex, optionIndex, day, time);
-                for(int minute = startTime; minute < endTime; minute++){
-                    if(mainBitSet.get(minute) == true){
-                        backTime = time;
-                        backMinute = minute - 1;
-                        checkTime = false;
-                        break;
-                    }
-                    mainBitSet.set(minute);
-                }
-            }
-        }
-        for(int time = backTime; time >= 0; time--){
-            for(int minute = backMinute; minute >= 0; minute--){
-                mainBitSet.clear(minute);
-            }
-        }
-        return checkTime;
-    }
-
-    private static void addCombinationToSchedule(){
-        ArrayList<Pair<Integer, Integer>> newCombination = new ArrayList<>(combination);
-        courseCombinations .add(newCombination);
-    }
-
-    private static String showSchedule(){
-        StringBuilder mySchedule = new StringBuilder();
-
-        for(int i = 0; i<courseCombinations.size();i++){
-            mySchedule.append("~"+"\n");
-            for(int j = 0; j<courseCombinations.get(i).size();j++){
-                int courseIndex = courseCombinations.get(i).get(j).getKey();
-                int optionIndex = courseCombinations.get(i).get(j).getValue();
-                mySchedule.append((courses.get(courseIndex).courseToString(optionIndex))+"\n");
-            }
-           // mySchedule.append("\n");
-        }
-
-        return mySchedule.toString();
-    }
 }
