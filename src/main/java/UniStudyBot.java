@@ -38,9 +38,9 @@ import java.util.Map.Entry;
 import static Objects.Keyboards.*;
 
 public class UniStudyBot extends TelegramLongPollingBot
-{   
+{
     private Logger logger = Logger.getLogger(UniStudyBot.class.getName());
-    
+
     private static final int START_STATE = 0;
     private static final int MAIN_MENU = 1;
     // Course Settings BEGIN
@@ -60,7 +60,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     private static final int EXAMS_MENU = 14;
     private static final int ADDING_EXAM = 15;
     private static final int ADDING_COURSE_TO_EXAM = 16;
-    
+
     public String getStateFromInt(int state) {
         String result = "";
         switch(state) {
@@ -75,7 +75,7 @@ public class UniStudyBot extends TelegramLongPollingBot
                 break;
             case 3:
                 result = "ADDING_COURSE";
-                break;   
+                break;
             case 4:
                 result = "ADD_TIME";
                 break;
@@ -87,7 +87,7 @@ public class UniStudyBot extends TelegramLongPollingBot
                 break;
             case 7:
                 result = "DELETING_COURSE";
-                break;       
+                break;
             case 8:
                 result = "GENERATING_NEW_SCHEDULE";
                 break;
@@ -115,13 +115,13 @@ public class UniStudyBot extends TelegramLongPollingBot
             case 16:
                 result = "ADDING_COURSE_TO_EXAM";
                 break;
-            default: 
+            default:
                 result = "YOU FORGOT TO ADD DESCRIPTION OF THE COMMAND!";
                 break;
         }
         return result;
     }
-    
+
     private SendMessage onCommandReceived(Message message) {
         SendMessage sendMessage = null;
         switch(message.getText().split(" ")[0])
@@ -150,7 +150,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return sendMessage;
     }
-    
+
     /* State Pattern */
     @Override
     public void onUpdateReceived(Update update) {
@@ -158,9 +158,9 @@ public class UniStudyBot extends TelegramLongPollingBot
             Message message = update.getMessage();
             // Inserting user to database or updating his info
             Database.getInstance().addUser(message.getFrom().getId());
-            
+
             System.out.println(message.getText()); // DEBUG ONLY
-            
+
             // If a command received
             SendMessage sendMessage = onCommandReceived(message);
             if(sendMessage != null) {
@@ -169,14 +169,14 @@ public class UniStudyBot extends TelegramLongPollingBot
                     execute(sendMessage);
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
-                } 
+                }
                 return;
             }
-            
+
             // Getting user's current state
             final int state = Database.getInstance().getState(message.getFrom().getId(), message.getChatId());
             System.out.println(getStateFromInt(state)); // DEBUG ONLY
-                                                
+
             switch(state) {
                 case MAIN_MENU:
                     sendMessage = onMainMenu(message);
@@ -230,21 +230,21 @@ public class UniStudyBot extends TelegramLongPollingBot
                     sendMessage = onDefault(message);
                     break;
             }
-                    
+
             try {
                 if(sendMessage == null) {
                     sendMessage = new SendMessage();
                     sendMessage.setText("Unknown option");
                 }
                 sendMessage.setChatId(update.getMessage().getChatId());
-                execute(sendMessage); 
+                execute(sendMessage);
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
-            
+
         }
     }
-    
+
     private void sendErrorMessage(String errorMessage, Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setReplyToMessageId(message.getMessageId()).setText(errorMessage);
@@ -255,7 +255,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             e.printStackTrace();
         }
     }
-    
+
     private void sendInfoMessage(String infoMessage, Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText(infoMessage);
@@ -266,7 +266,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             e.printStackTrace();
         }
     }
-    
+
     private List<String> splitInputAddEmptyStrings(Message message, int emptyStringsNum) {
         Splitter splitter = Splitter.on(',').trimResults();
         List<String> strings = Lists.newArrayList((splitter.splitToList(message.getText())));
@@ -277,7 +277,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         strings.addAll(emptyStrings);
         return strings;
     }
-    
+
     private SendMessage onDefault(Message message) {
         if(message.getText().equals("/menu")) {
             return menuSelected(message);
@@ -285,7 +285,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             return defaultSelected(message);
         }
     }
-    
+
     private SendMessage onMainMenu(Message message) {
         if(message.getText().equals("/course_settings")) {
             return courseSettingsSelected(message);
@@ -304,17 +304,17 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return menuSelected(message);
     }
-    
+
     private SendMessage onCalculateGpa(Message message) {
         SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
         if(cancelMessage != null) return cancelMessage;
-        
+
         if(message.getText().equals("/count_gpa_new")) {
             return selectGpaScaleSelected(message);
         } else if(message.getText().equals("/see_gpa_previous")) {
             return seeGpaPreviousSelected(message);
         } else if(message.getText().equals("/clear_gpa_data")) {
-            return clearGpaDataSelected(message); 
+            return clearGpaDataSelected(message);
         } else if(message.getText().equals("/count_gpa_current")) {
             return selectGpaScaleSelected(message);
         } else if(message.getText().equals("/delete_gpa_set")) {
@@ -322,7 +322,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return calculateGpaSelected(message);
     }
-    
+
     private GpaCalculator getGpaCalculator(Message message) {
         String gpaScale = message.getReplyToMessage().getText();
         if(gpaScale == null) {
@@ -342,7 +342,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return gpaCalculator;
     }
-    
+
     private void checkLimitsOfGpaData(List<String> courseInputs, Message message) {
         int gpa_sets = Database.getInstance().getNoOfGpaSets(message.getFrom().getId());
         System.out.println("gpa_sets_no: " + gpa_sets); // DEBUG ONLY
@@ -355,7 +355,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             throw new IllegalStateException("The limit of 150 number of courses in the input has exceeded");
         }
     }
-    
+
     private SendMessage cancelSelected(Message message, SendMessage toSend) {
         if(message.getText().equals("/cancel")) {
             try {
@@ -370,7 +370,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return null;
     }
-    
+
     private SendMessage onAddingCourseToExam(Message message) {
         SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
         if(cancelMessage != null) return cancelMessage;
@@ -411,7 +411,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             return addCourseToExamSelected(message, examId);
         }
     }
-    
+
     private SendMessage onAddingExam(Message message) { // TODO
         SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
         if(cancelMessage != null) return cancelMessage;
@@ -446,8 +446,8 @@ public class UniStudyBot extends TelegramLongPollingBot
             sendErrorMessage("Error occurred. Please, try again", message);
         }
         return examsMenuSelected(message);
-    } 
-    
+    }
+
     private SendMessage onExamsMenu(Message message) {
         SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
         if(cancelMessage != null) return cancelMessage;
@@ -464,7 +464,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return examsMenuSelected(message);
     }
-    
+
     private SendMessage onDeleteGpaSet(Message message) {
         SendMessage cancelMessage = cancelSelected(message, calculateGpaSelected(message));
         if(cancelMessage != null) return cancelMessage;
@@ -483,7 +483,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return calculateGpaSelected(message);
     }
-    
+
     private SendMessage onCountingGpaNew(Message message) {
         SendMessage cancelMessage = cancelSelected(message, calculateGpaSelected(message));
         if(cancelMessage != null) return cancelMessage;
@@ -517,13 +517,13 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return calculateGpaSelected(message);
     }
-    
+
     private boolean checkIfLetterGrade(String string) {
         Pattern pattern = Pattern.compile("(?i)^([ABCD][-+]?|[F])$");
         Matcher matcher = pattern.matcher(string);
         return matcher.matches();
     }
-    
+
     private SendMessage onCountingGpaCurrent(Message message) {
         SendMessage cancelMessage = cancelSelected(message, calculateGpaSelected(message));
         if(cancelMessage != null) return cancelMessage;
@@ -559,15 +559,15 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return calculateGpaSelected(message);
     }
-    
+
     private SendMessage onSelectGpaScale(Message message, final int state) {
         SendMessage cancelMessage = cancelSelected(message, calculateGpaSelected(message));
         if(cancelMessage != null) return cancelMessage;
-        
+
         String text = message.getText();
         if(! text.equals("4.0") && ! text.equals("4.3") && ! text.equals("100%")) {
             return calculateGpaSelected(message);
-        } 
+        }
         if(state == COUNT_GPA_NEW) {
             return countingGpaNewSelected(message);
         } else if(state == COUNT_GPA_CURRENT) {
@@ -575,26 +575,26 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return calculateGpaSelected(message);
     }
-    
+
     private SendMessage onCourseSettings(Message message) {
         SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
         if(cancelMessage != null) return cancelMessage;
-        
+
         if(message.getText().equals("/add_course")) {
             return addCourseSelected(message);
         } else if(message.getText().equals("/delete_course")) {
-            return deleteCourseSelected(message); 
+            return deleteCourseSelected(message);
         } else if(message.getText().equals("/view_courses")) {
-            return viewCoursesSelected(message); 
+            return viewCoursesSelected(message);
         }
         return courseSettingsSelected(message);
     }
-    
+
     private SendMessage onGeneratingNewSchedule(Message message)
     {
         SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
         if(cancelMessage != null) return cancelMessage;
-        
+
         try {
             // TODO make preconditions checking
             SendMessage sendMessage = new SendMessage();
@@ -606,12 +606,12 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return menuSelected(message);
     }
-    
+
     // TODO make courseName case-insensitive
     private SendMessage onAddingCourse(Message message) {
         SendMessage cancelMessage = cancelSelected(message, courseSettingsSelected(message));
         if(cancelMessage != null) return cancelMessage;
-        
+
         try {
             List<String> strings = splitInputAddEmptyStrings(message, 4);
             String name = strings.get(0);
@@ -631,13 +631,13 @@ public class UniStudyBot extends TelegramLongPollingBot
             logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
         }
         // If something goes unexpected
-        return courseSettingsSelected(message); 
+        return courseSettingsSelected(message);
     }
-    
+
     private SendMessage onDeletingCourse(Message message) {
         SendMessage cancelMessage = cancelSelected(message, courseSettingsSelected(message));
         if(cancelMessage != null) return cancelMessage;
-        
+
         try {
             List<String> strings = splitInputAddEmptyStrings(message, 0);
             Preconditions.checkArgument(strings.size() > 0);
@@ -662,13 +662,13 @@ public class UniStudyBot extends TelegramLongPollingBot
             logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
         }
         // If something goes unexpected
-        return courseSettingsSelected(message); 
+        return courseSettingsSelected(message);
     }
-    
+
     private SendMessage onAddingTime(Message message) { // TODO make adding time with commas
         SendMessage cancelMessage = cancelSelected(message, courseSettingsSelected(message));
         if(cancelMessage != null) return cancelMessage;
-        
+
         SendMessage sendMessage = new SendMessage();
         String courseName = null;
         Message reply;
@@ -703,31 +703,31 @@ public class UniStudyBot extends TelegramLongPollingBot
             startTime = startTime + ":00";
             endTime = endTime + ":00";
             System.out.println(startTime + " - " + endTime); // DEBUG ONLY
-            Database.getInstance().addTime(message.getFrom().getId(), courseName, dayOfWeek, startTime, endTime); 
+            Database.getInstance().addTime(message.getFrom().getId(), courseName, dayOfWeek, startTime, endTime);
             return addTimeSelected(message, courseName).setText("Time was successfully added");
         } catch (IllegalArgumentException | NullPointerException e) {
             ForceReplyKeyboard forceReplyKeyboard = new ForceReplyKeyboard();
             sendErrorMessage("Incorrect format", message);
             sendMessage.setText(reply.getText()).setReplyMarkup(forceReplyKeyboard);
             return sendMessage;
-        } 
+        }
         catch (Exception e) {
             logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
         }
         return courseSettingsSelected(message);
     }
-    
+
     /* /add_time courseName */
-    private SendMessage onAddTime(Message message) { 
+    private SendMessage onAddTime(Message message) {
         SendMessage cancelMessage = cancelSelected(message, courseSettingsSelected(message));
         if(cancelMessage != null) return cancelMessage;
-        
+
         if(message.getText().split(" ")[0].equals("/add_time")) {
             return addingTimeSelected(message);
-        } 
+        }
         return null;
     }
-    
+
     private SendMessage viewExamsSelected(Message message) {
         List<Exam> exams = Database.getInstance().getExams(message.getFrom().getId());
         StringBuilder msg = new StringBuilder();
@@ -746,7 +746,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         sendInfoMessage(msg.toString(), message);
         return examsMenuSelected(message);
     }
-    
+
     private SendMessage addCourseToExamSelected(Message message, int examId) {
         SendMessage sendMessage = new SendMessage();
         String courses = Database.getInstance().getAllCoursesAsString(message.getFrom().getId());
@@ -766,7 +766,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADDING_COURSE_TO_EXAM);
         return sendMessage;
     }
-    
+
     private SendMessage addExamSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Write the exam you want to be saved in the following format:\n"
@@ -779,7 +779,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADDING_EXAM);
         return sendMessage;
     }
-    
+
     private SendMessage deleteGpaSetSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Input setID of a set which you want to delete\n"
@@ -789,7 +789,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), DELETE_GPA_SET);
         return sendMessage;
     }
-    
+
     private SendMessage selectGpaScaleSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Select the GPA scale");
@@ -801,7 +801,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return sendMessage;
     }
-    
+
     private SendMessage examsMenuSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setReplyMarkup(getExamsMenuKeyboard());
@@ -809,7 +809,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), EXAMS_MENU);
         return sendMessage;
     }
-    
+
     private SendMessage countingGpaNewSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setReplyToMessageId(message.getMessageId());
@@ -824,7 +824,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COUNTING_GPA_NEW);
         return sendMessage;
     }
-    
+
     private SendMessage countingGpaCurrentSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setReplyToMessageId(message.getMessageId());
@@ -846,7 +846,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COUNTING_GPA_CURRENT);
         return sendMessage;
     }
-    
+
     private SendMessage clearGpaDataSelected(Message message) { // TODO are you sure button?
         SendMessage sendMessage = new SendMessage();
         Database.getInstance().clearGpaData(message.getFrom().getId());
@@ -854,7 +854,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         sendMessage.setText("Your GPA sets have been successfully deleted").setReplyMarkup(getCalculateGpaKeyboard());
         return sendMessage;
     }
-    
+
     private SendMessage seeGpaPreviousSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         List<GpaSet> gpaSets = Database.getInstance().getGpaSets(message.getFrom().getId());
@@ -877,7 +877,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         sendMessage.setText(result).setReplyMarkup(getCalculateGpaKeyboard());
         return sendMessage;
     }
-    
+
     private SendMessage viewCoursesSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         String courses = Database.getInstance().getAllCoursesAsString(message.getFrom().getId());
@@ -891,7 +891,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return sendMessage;
     }
-    
+
     private SendMessage addingTimeSelected(Message message) {
         Splitter splitter = Splitter.on(' ').trimResults().limit(2);
         SendMessage sendMessage = new SendMessage();
@@ -923,14 +923,14 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADDING_TIME);
         return sendMessage;
     }
-    
+
     private SendMessage addTimeSelected(Message message, String courseName) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setReplyMarkup(getAddTimeKeyboard(courseName));
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADD_TIME);
         return sendMessage;
     }
-    
+
     private SendMessage addCourseSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Enter the course info in the format: COURSE_NAME,NUM_OF_CREDITS,PROFESSOR,ROOM\n"
@@ -942,7 +942,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADDING_COURSE);
         return sendMessage;
     }
-    
+
     private SendMessage deleteCourseSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Enter the course name you want to delete, or a list of them\n"
@@ -952,17 +952,22 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), DELETING_COURSE);
         return sendMessage;
     }
-    
+
     private SendMessage generateNewScheduleSelected(Message message) {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setText("Enter the name of courses along with their respective schedule\n"
-                + "Example: " // TODO
+    	SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Enter the name of courses along with their respective schedules\n"
+                + "Example: \n"
+                + "Chemistry: (Tuesday 9:00 - 10:15, Thursday 9:00 - 10:15)\n"
+                + "Math: (Monday 9:00 - 10:15, Wednesday 9:00 - 10:15) (Tuesday 9:00 - 10:15, Thursday 9:00 - 10:15)\n"
+                + "Every new course should start from new line. \n"
+                + "Every course name should be followed by a colon \":\". \n"
+                + "Every time slot option should be enclosed in brackets. \n"
                 + "Or write /cancel to go to previous menu");
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), GENERATING_NEW_SCHEDULE);
         return sendMessage;
     }
-    
-        
+
+
     private SendMessage calculateGpaSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Select the menu item");
@@ -970,7 +975,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), CALCULATE_GPA);
         return sendMessage;
     }
-    
+
     private SendMessage courseSettingsSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Select the menu item");
@@ -978,7 +983,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COURSE_SETTINGS);
         return sendMessage;
     }
-    
+
     private SendMessage menuSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Select the menu item");
@@ -986,22 +991,22 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), MAIN_MENU);
         return sendMessage;
     }
-    
+
     private SendMessage defaultSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         ReplyKeyboardRemove replyMarkup = new ReplyKeyboardRemove();
-        sendMessage.setText("Welcome to our app, " + 
-                (message.getFrom().getUserName() == null ? "" : message.getFrom().getUserName()) + 
+        sendMessage.setText("Welcome to our app, " +
+                (message.getFrom().getUserName() == null ? "" : message.getFrom().getUserName()) +
                 "!\nTo begin write /menu").setReplyMarkup(replyMarkup);
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), START_STATE);
         return sendMessage;
     }
-    
+
     @Override
     public String getBotUsername() {
         return Consts.USERNAME;
     }
-    
+
     @Override
     public String getBotToken() {
         return Consts.TOKEN;
