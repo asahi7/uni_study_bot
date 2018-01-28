@@ -1,7 +1,7 @@
 package MakeSchedule;
 
 public class Main {
-  /*  public static void main(String[] args) {
+  /* public static void main(String[] args) {
         String course =
                 "Math:(Monday 9:00-12:00,Wednesday 9:00-12:00)(Tuesday 9:00-12:00)" + "\n"+
                 "English:(Tuesday 9:00-12:00,Thursday 9:00-12:00)" + "\n"+
