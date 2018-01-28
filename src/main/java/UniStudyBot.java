@@ -1,3 +1,4 @@
+import org.apache.commons.io.monitor.FileAlterationListener;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
@@ -17,14 +18,23 @@ import com.google.common.base.Preconditions;
 import java.util.logging.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.xml.crypto.Data;
+
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 
 import MakeSchedule.Course;
 import MakeSchedule.Scheduler;
+import Objects.Exam;
 import Objects.GpaSet;
 
 import java.util.*;
+import java.util.Map.Entry;
+
 import static Objects.Keyboards.*;
 
 public class UniStudyBot extends TelegramLongPollingBot
@@ -47,6 +57,9 @@ public class UniStudyBot extends TelegramLongPollingBot
     private static final int COUNTING_GPA_NEW = 11;
     private static final int COUNTING_GPA_CURRENT = 12;
     private static final int DELETE_GPA_SET = 13;
+    private static final int EXAMS_MENU = 14;
+    private static final int ADDING_EXAM = 15;
+    private static final int ADDING_COURSE_TO_EXAM = 16;
     
     public String getStateFromInt(int state) {
         String result = "";
@@ -92,6 +105,15 @@ public class UniStudyBot extends TelegramLongPollingBot
                 break;
             case 13:
                 result = "DELETE_GPA_SET";
+                break;
+            case 14:
+                result = "EXAMS_MENU";
+                break;
+            case 15:
+                result = "ADDING_EXAM";
+                break;
+            case 16:
+                result = "ADDING_COURSE_TO_EXAM";
                 break;
             default: 
                 result = "YOU FORGOT TO ADD DESCRIPTION OF THE COMMAND!";
@@ -195,6 +217,15 @@ public class UniStudyBot extends TelegramLongPollingBot
                 case DELETE_GPA_SET:
                     sendMessage = onDeleteGpaSet(message);
                     break;
+                case EXAMS_MENU:
+                    sendMessage = onExamsMenu(message);
+                    break;
+                case ADDING_EXAM:
+                    sendMessage = onAddingExam(message);
+                    break;
+                case ADDING_COURSE_TO_EXAM:
+                    sendMessage = onAddingCourseToExam(message);
+                    break;
                 default:
                     sendMessage = onDefault(message);
                     break;
@@ -268,6 +299,9 @@ public class UniStudyBot extends TelegramLongPollingBot
         else if(message.getText().equals("/calculate_gpa")) {
             return calculateGpaSelected(message);
         }
+        else if(message.getText().equals("/exams_menu")) {
+            return examsMenuSelected(message);
+        }
         return menuSelected(message);
     }
     
@@ -335,6 +369,100 @@ public class UniStudyBot extends TelegramLongPollingBot
             return toSend.setReplyToMessageId(null);
         }
         return null;
+    }
+    
+    private SendMessage onAddingCourseToExam(Message message) {
+        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        if(cancelMessage != null) return cancelMessage;
+        int examId = -1;
+        try {
+            examId = Integer.parseInt(message.getReplyToMessage().getText());
+            // Biology,88 Literature,99
+            Splitter splitter = Splitter.on(CharMatcher.whitespace()).trimResults().omitEmptyStrings();
+            List<String> courses = splitter.splitToList(message.getText());
+            Map<String, Integer> courseMap = new HashMap<>();
+            Splitter splitter2 = Splitter.on(",").trimResults().omitEmptyStrings();
+            for(int i = 0; i < courses.size(); i++) {
+                List<String> el = splitter2.splitToList(courses.get(i));
+                int prepLevel = Integer.parseInt(el.get(1));
+                if(prepLevel < 0 || prepLevel > 100) {
+                    throw new IllegalArgumentException("Preparation level value is not correct");
+                }
+                courseMap.put(el.get(0), prepLevel);
+            }
+            if(! Database.getInstance().existCourseNames(message.getFrom().getId(), courseMap.keySet())) {
+                throw new NoSuchElementException("Courses with given names do not exist");
+            }
+            for(Entry<String, Integer> entry : courseMap.entrySet()) {
+                Database.getInstance().addCourseToExam(examId, entry.getKey(), entry.getValue()); // TODO make addCoursesToExam
+            }
+            Database.getInstance().updateTotalPrepLevel(examId);
+            int totalLevel = Database.getInstance().getTotalPrepLevel(examId);
+            sendInfoMessage("Your total preparation level for this exam: " + totalLevel, message);
+            return examsMenuSelected(message);
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
+            sendErrorMessage("Error occurred. Please, try again", message);
+        }
+        if(examId == -1) {
+            return examsMenuSelected(message);
+        }
+        else {
+            return addCourseToExamSelected(message, examId);
+        }
+    }
+    
+    private SendMessage onAddingExam(Message message) { // TODO
+        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        if(cancelMessage != null) return cancelMessage;
+        try {
+            Splitter splitter = Splitter.on(",").trimResults().omitEmptyStrings();
+            List<String> examInputs = splitter.splitToList(message.getText());
+            // Midterm,17.04.2018,100
+            String regex = "^\\s*(3[01]|[12][0-9]|0?[1-9])\\.(1[012]|0?[1-9])\\.((?:19|20)\\d{2})\\s*$";
+            if(! Pattern.matches(regex, examInputs.get(1))) {
+                throw new IllegalArgumentException("Regex doesn't match date format");
+            }
+            DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+            Date date = dateFormat.parse(examInputs.get(1));
+            Timestamp timestamp = new Timestamp(date.getTime());
+            int prepLevel = Integer.parseInt(examInputs.get(2));
+            if(prepLevel < 0 || prepLevel > 100) {
+                throw new IllegalArgumentException("The prepLevel parameter must be in range [0-100]");
+            }
+            Exam exam = new Exam();
+            exam.setUserId(message.getFrom().getId());
+            exam.setDate(timestamp);
+            exam.setName(examInputs.get(0));
+            exam.setTotalPrepLevel(prepLevel);
+            int examId = Database.getInstance().addExam(exam);
+            if(examId == -1) {
+                sendErrorMessage("Something bad has occurred", message);
+                return examsMenuSelected(message);
+            }
+            return addCourseToExamSelected(message, examId);
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
+            sendErrorMessage("Error occurred. Please, try again", message);
+        }
+        return examsMenuSelected(message);
+    } 
+    
+    private SendMessage onExamsMenu(Message message) {
+        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        if(cancelMessage != null) return cancelMessage;
+        if(message.getText().equals("/add_exam")) {
+            return addExamSelected(message);
+        } else if(message.getText().equals("/view_exams")) {
+            return viewExamsSelected(message); // TODO
+        } else if(message.getText().equals("/clear_exam_data")) {
+            sendInfoMessage("TODO", message);
+          //  return clearExamDataSelected(message); // TODO
+        } else if(message.getText().equals("/delete_exam")) {
+           // return deleteExamSelected(message); // TODO
+            sendInfoMessage("TODO", message);
+        }
+        return examsMenuSelected(message);
     }
     
     private SendMessage onDeleteGpaSet(Message message) {
@@ -513,16 +641,12 @@ public class UniStudyBot extends TelegramLongPollingBot
         try {
             List<String> strings = splitInputAddEmptyStrings(message, 0);
             Preconditions.checkArgument(strings.size() > 0);
-            for(int i = 0; i < strings.size(); i++) {
-                String name = strings.get(i);
-                Preconditions.checkArgument(! name.equals("") && name != null);
-                if(! Database.getInstance().existsCourseName(message.getFrom().getId(), name)) {
-                    throw new NoSuchElementException();
-                }
+            if(! Database.getInstance().existCourseNames(message.getFrom().getId(), strings)) {
+                throw new NoSuchElementException("Courses with given names do not exist");
             }
             for(int i = 0; i < strings.size(); i++) {
                 String name = strings.get(i);
-                Database.getInstance().deleteCourse(message.getFrom().getId(), name);
+                Database.getInstance().deleteCourse(message.getFrom().getId(), name); // TODO make deleteCourses -> one row
             }
             return courseSettingsSelected(message).setText("Courses were successfully deleted");
         } catch (NoSuchElementException e) {
@@ -604,6 +728,58 @@ public class UniStudyBot extends TelegramLongPollingBot
         return null;
     }
     
+    private SendMessage viewExamsSelected(Message message) {
+        List<Exam> exams = Database.getInstance().getExams(message.getFrom().getId());
+        StringBuilder msg = new StringBuilder();
+        DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+        for(int i = 0; i < exams.size(); i++) {
+            msg.append("{\n");
+            Exam exam = exams.get(i);
+            Date date = new Date(exam.getDate().getTime());
+            String dateString = dateFormat.format(date);
+            msg.append(exam.getName() + ", " + dateString + ", " + exam.getTotalPrepLevel() + "%" + ":\n");
+            for(Entry<String, Integer> entry : exam.getCoursePrep().entrySet()) {
+                msg.append(entry.getKey() + " - " + entry.getValue() + "%" + "\n");
+            }
+            msg.append("}\n");
+        }
+        sendInfoMessage(msg.toString(), message);
+        return examsMenuSelected(message);
+    }
+    
+    private SendMessage addCourseToExamSelected(Message message, int examId) {
+        SendMessage sendMessage = new SendMessage();
+        String courses = Database.getInstance().getAllCoursesAsString(message.getFrom().getId());
+        if(courses != null && ! courses.isEmpty()) {
+            sendInfoMessage(courses, message);
+        } else {
+            sendInfoMessage("You don't have any courses to add, please add courses first", message);
+            return courseSettingsSelected(message);
+        }
+        String msg = "Write courses you want to add to the exam in the following format:\n"
+                   + "COURSE_NAME,PREPARATION_LEVEL\n"
+                   + "Example: Biology,88 Literature,99\n"
+                   + "Note: The PREPARATION_LEVEL's range is [0-100]. COURSE_NAME must match one of your existing courses\n"
+                   + "Or write /cancel to go to previous menu";
+        sendInfoMessage(msg, message);
+        sendMessage.setText(Integer.toString(examId)).setReplyMarkup(new ForceReplyKeyboard());
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADDING_COURSE_TO_EXAM);
+        return sendMessage;
+    }
+    
+    private SendMessage addExamSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Write the exam you want to be saved in the following format:\n"
+                + "EXAM_NAME,DATE,PREPARATION_LEVEL\n"
+                + "Required fields: EXAM_NAME\n"
+                + "Example: Midterm,17.04.2018,100\n"
+                + "Example: Finals,13.06.2018,78\n"
+                + "Note: Date must match exact the same format. The PREPARATION_LEVEL's range is [0-100]\n"
+                + "Or write /cancel to go to previous menu");
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADDING_EXAM);
+        return sendMessage;
+    }
+    
     private SendMessage deleteGpaSetSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Input setID of a set which you want to delete\n"
@@ -623,6 +799,14 @@ public class UniStudyBot extends TelegramLongPollingBot
         } else {
             Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COUNT_GPA_NEW);
         }
+        return sendMessage;
+    }
+    
+    private SendMessage examsMenuSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setReplyMarkup(getExamsMenuKeyboard());
+        sendMessage.setText("Select the menu item"); // TODO more friendly message
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), EXAMS_MENU);
         return sendMessage;
     }
     
@@ -716,7 +900,9 @@ public class UniStudyBot extends TelegramLongPollingBot
             courseName = splitter.splitToList(message.getText()).get(1);
             Preconditions.checkNotNull(courseName);
             Preconditions.checkArgument(! courseName.equals(""));
-            if(! Database.getInstance().existsCourseName(message.getFrom().getId(), courseName)) {
+            List<String> courses = new ArrayList<>();
+            courses.add(courseName);
+            if(! Database.getInstance().existCourseNames(message.getFrom().getId(), courses)) {
                 throw new NoSuchElementException();
             }
         } catch(IndexOutOfBoundsException | IllegalArgumentException | NullPointerException e) {

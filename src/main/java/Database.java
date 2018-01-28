@@ -1,8 +1,15 @@
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.*;
+
+import com.mysql.jdbc.SQLError;
+
 import MakeSchedule.Course;
+import Objects.Exam;
 import Objects.GpaSet;;
 
 public class Database
@@ -36,6 +43,7 @@ public class Database
     
     private void createInitialTables() {
         try (Statement statement = connection.createStatement()) {
+            connection.setAutoCommit(false); // TODO check
             logger.log(Level.INFO, "Creating (if not already) initial user table");
             statement.executeUpdate(CreateTablesStrings.CREATE_USERS_TABLE);
             logger.log(Level.INFO, "Creating (if not already) initial courses table");
@@ -48,6 +56,12 @@ public class Database
             statement.executeUpdate(CreateTablesStrings.CREATE_GPA_SETS_TABLE);
             logger.log(Level.INFO, "Creating (if not already) initial gpa_set_courses table");
             statement.executeUpdate(CreateTablesStrings.CREATE_GPA_SET_COURSES_TABLE);
+            logger.log(Level.INFO, "Creating (if not already) initial exams table");
+            statement.executeUpdate(CreateTablesStrings.CREATE_EXAMS_TABLE);
+            logger.log(Level.INFO, "Creating (if not already) initial prepared_for table");
+            statement.executeUpdate(CreateTablesStrings.CREATE_PREPARED_FOR_TABLE);
+            connection.commit();
+            connection.setAutoCommit(true);
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Creation of initial tables was not successful", e);
         }
@@ -130,18 +144,79 @@ public class Database
         }
     }
   
-    public boolean existsCourseName(int userId, String name) {
-        try(PreparedStatement statement = connection.prepareStatement("SELECT name FROM courses WHERE user_id=? AND name=?")){
+    public boolean existCourseNames(int userId, Collection<String> names) {
+        if(names.isEmpty()) return false;
+        StringBuilder query = new StringBuilder("SELECT count(*) FROM courses WHERE user_id=? AND name IN (");
+        boolean isFirst = false;
+        for(String name : names) {
+            if(! isFirst) {
+                isFirst = true;
+            } else {
+                query.append(",");
+            }
+            query.append("?");
+        }
+        query.append(")");
+        try(PreparedStatement statement = connection.prepareStatement(query.toString())){
             statement.setInt(1, userId);
-            statement.setString(2, name);
+            int i = 2;
+            for(String name : names) {
+                statement.setString(i, name);
+                i++;
+            }
             ResultSet resultSet = statement.executeQuery();
             if(resultSet.next()) {
-                return true;
+                int count = resultSet.getInt(1);
+                if(count == names.size()) {
+                    return true;
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return false;
+    }
+    
+    public void updateTotalPrepLevel(int examId) {
+        try(PreparedStatement statement = connection.prepareStatement("UPDATE exams SET total_prep_level=(SELECT AVG(level) FROM prepared_for WHERE exam_id=?) WHERE exam_id=?")) {
+            statement.setInt(1, examId);
+            statement.setInt(2, examId);
+            int affectedRows = statement.executeUpdate();
+            if(affectedRows != 1) {
+                throw new SQLException("Update didn't execute correctly");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public int getTotalPrepLevel(int examId) {
+        try(PreparedStatement statement = connection.prepareStatement("SELECT total_prep_level FROM exams WHERE exam_id=?")) {
+            statement.setInt(1, examId);
+            ResultSet resultSet = statement.executeQuery();
+            if(resultSet.next()) {
+                return resultSet.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+    
+    public void addCourseToExam(int examId, String courseNmae, int prepLevel) {
+        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO prepared_for(exam_id,course_name,level) VALUES(?,?,?) ON DUPLICATE KEY "
+                + "UPDATE level=?")) {
+            statement.setInt(1, examId);
+            statement.setString(2, courseNmae);
+            statement.setInt(3, prepLevel);
+            statement.setInt(4, prepLevel);
+            int affectedRows = statement.executeUpdate();
+            if(affectedRows != 1) {
+                throw new SQLException("Inserting to prepared_for table failed");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
     
     public void addTime(int userId, String name, String day, String startTime, String endTime) {
@@ -321,5 +396,60 @@ public class Database
             e.printStackTrace();
         }
         return null;
+    }
+    
+    public List<Exam> getExams(int userId) {
+        List<Exam> exams = new ArrayList<>();
+        try(PreparedStatement statement = connection.prepareStatement("SELECT exams.*,course_name,level FROM exams LEFT JOIN prepared_for ON exams.exam_id=prepared_for.exam_id "
+                + "WHERE exams.user_id=? ORDER BY exams.name ASC", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)) {
+            statement.setInt(1, userId);
+            ResultSet resultSet = statement.executeQuery();
+            while(resultSet.next()) {
+                int examId = resultSet.getInt("exam_id");
+                Timestamp date = resultSet.getTimestamp("date");
+                String examName = resultSet.getString("name");
+                int totalPrepLevel = resultSet.getInt("total_prep_level");
+                Exam exam = new Exam();
+                exam.setExamId(examId);
+                exam.setDate(date);
+                exam.setName(examName);
+                exam.setTotalPrepLevel(totalPrepLevel);
+                Map<String, Integer> courses = new HashMap<>();
+                resultSet.previous();
+                while(resultSet.next()) {
+                    if(exam.getExamId() != resultSet.getInt("exam_id")) {
+                        resultSet.previous();
+                        break;
+                    }
+                    courses.put(resultSet.getString("course_name"), resultSet.getInt("level"));
+                }
+                exam.setCoursePrep(courses);
+                exams.add(exam);
+            }
+            return exams;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return exams;
+    }
+    
+    public int addExam(Exam exam) {
+        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO exams(user_id,name,date,total_prep_level) VALUES(?,?,?,?)", Statement.RETURN_GENERATED_KEYS)) {
+            statement.setInt(1, exam.getUserId());
+            statement.setString(2, exam.getName());
+            statement.setTimestamp(3, exam.getDate());
+            statement.setInt(4, exam.getTotalPrepLevel());
+            int affectedRows = statement.executeUpdate();
+            if(affectedRows != 1) {
+                throw new SQLException("Insertion failed");
+            }
+            ResultSet resultSet = statement.getGeneratedKeys();
+            if(resultSet.next()) {
+                return resultSet.getInt(1); 
+            }
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+        return -1;
     }
 }

@@ -6,6 +6,29 @@ import org.telegram.telegrambots.api.objects.replykeyboard.buttons.KeyboardRow;
 
 public class Keyboards
 {
+    public static ReplyKeyboardMarkup getExamsMenuKeyboard() {
+        ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
+        replyMarkup.setOneTimeKeyboard(true);
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        KeyboardRow keyboardRow = new KeyboardRow();
+        keyboardRow.add("/add_exam");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/view_exams");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/delete_exam");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/clear_exam_data");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/cancel");
+        keyboardRows.add(keyboardRow);
+        replyMarkup.setKeyboard(keyboardRows);
+        return replyMarkup;
+    }
+    
     public static ReplyKeyboardMarkup getAddTimeKeyboard(String courseName) {
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
         replyMarkup.setOneTimeKeyboard(true);
@@ -101,6 +124,9 @@ public class Keyboards
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
         keyboardRow.add("/calculate_gpa");
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/exams_menu");
         keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
         return replyMarkup;

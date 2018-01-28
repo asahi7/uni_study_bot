@@ -45,4 +45,18 @@ public class CreateTablesStrings
             + "credits INTEGER NOT NULL,"
             + "letter VARCHAR(3) NOT NULL,"
             + "FOREIGN KEY(set_id) REFERENCES gpa_sets(set_id) ON DELETE CASCADE)";
+    public static final String CREATE_EXAMS_TABLE = "CREATE TABLE IF NOT EXISTS exams ("
+            + "exam_id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,"
+            + "name VARCHAR(255) NOT NULL,"
+            + "user_id INTEGER NOT NULL,"
+            + "FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,"
+            + "date TIMESTAMP DEFAULT CURRENT_TIMESTAMP," // TODO maybe it should be made changeable
+            + "total_prep_level INTEGER DEFAULT 0)"; 
+    public static final String CREATE_PREPARED_FOR_TABLE = "CREATE TABLE IF NOT EXISTS prepared_for ("
+            + "exam_id INTEGER NOT NULL,"
+            + "course_name VARCHAR(255) NOT NULL," // TODO name
+            + "level INTEGER DEFAULT 0,"
+            + "FOREIGN KEY(exam_id) REFERENCES exams(exam_id) ON DELETE CASCADE,"
+            + "FOREIGN KEY(course_name) REFERENCES courses(name) ON DELETE CASCADE,"
+            + "CONSTRAINT constr4 PRIMARY KEY(exam_id,course_name))"; 
 }
