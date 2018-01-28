@@ -109,12 +109,13 @@ public class Scheduler {
     private static String showSchedule(){
         StringBuilder mySchedule = new StringBuilder();
         for(int i = 0; i<courseCombinations.size();i++){
-            mySchedule.append("~"+"\n");
+            mySchedule.append("~ "+"Combination "+(i+1)+" ~"+"\n");
             for(int j = 0; j<courseCombinations.get(i).size();j++){
                 Course course = courseCombinations.get(i).get(j).getKey();
                 int optionIndex = courseCombinations.get(i).get(j).getValue();
-               mySchedule.append((course.courseToString(optionIndex))+"\n");
+                mySchedule.append((course.courseToString(optionIndex))+"\n");
             }
+            mySchedule.append("\n");
         }
         return mySchedule.toString();
     }
