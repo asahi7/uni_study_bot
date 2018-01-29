@@ -37,6 +37,7 @@ import java.util.*;
 import java.util.Map.Entry;
 
 import static Objects.Keyboards.*;
+import static Objects.TextOnButtons.*;
 
 public class UniStudyBot extends TelegramLongPollingBot
 {
@@ -133,36 +134,34 @@ public class UniStudyBot extends TelegramLongPollingBot
 
     private SendMessage onCommandReceived(Message message) {
         SendMessage sendMessage = null;
-        switch(message.getText().split(" ")[0])
-        {
-            case "/menu":
-                sendMessage = menuSelected(message);
-                break;
-            case "/start":
-                sendMessage = defaultSelected(message);
-                break;
-            case "/add_time":
-                sendMessage = onAddTime(message);
-                break;
-            case "/view_courses":
-                sendMessage = viewCoursesSelected(message);
-                break;
-            case "/view_exams":
-                sendMessage = viewExamsSelected(message);
-                break;
-            case "/calculate_gpa":
-                sendMessage = calculateGpaSelected(message);
-                break;
-            case "/add_course":
-                sendMessage = addCourseSelected(message);
-                break;
-            case "/about":
-                sendMessage = aboutSelected(message);
-                break;
-            default:
-                sendMessage = null;
-                break;
+        if(message.getText().equals("/menu")){
+        	sendMessage = menuSelected(message);//"/menu"
         }
+        else if(message.getText().equals("/start")){
+        	sendMessage = defaultSelected(message);//"/start"
+        }///cancel
+        else if(message.getText().equals(addTimeButton())||message.getText().equals("/add_time")){
+        	sendMessage = onAddTime(message);//"/add_time"
+        }
+        else if(message.getText().equals(viewCoursesButton())||message.getText().equals("/view_courses")){
+        	sendMessage = viewCoursesSelected(message);//"/view_courses"
+        }
+        else if(message.getText().equals(viewExamsButton())||message.getText().equals("/view_exams")){
+        	sendMessage = viewExamsSelected(message);//"/view_exams"
+        }
+        else if(message.getText().equals(calculateGpaButton())||message.getText().equals("/calculate_gpa")){
+        	sendMessage = calculateGpaSelected(message);//"/calculate_gpa"
+        }
+        else if(message.getText().equals(addCourseButton())||message.getText().equals("/add_course")){//addCourseButton()
+        	sendMessage = addCourseSelected(message);//"/add_course"
+        }
+        else if(message.getText().equals(aboutButton())||message.getText().equals("/about")){//aboutButton()
+        	sendMessage = aboutSelected(message);//"/about"
+        }
+        else{
+        	sendMessage = null;
+        }
+
         return sendMessage;
     }
 
@@ -297,22 +296,22 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onMainMenu(Message message) {
-        if(message.getText().equals("/course_settings")) {
+        if(message.getText().equals(courseSettingsButton())||message.getText().equals("/course_settings")) {//"/course_settings"
             return courseSettingsSelected(message);
         }
-        else if(message.getText().equals("/generate_new_schedule")) {
+        else if(message.getText().equals(generateNewScheduleButton())||message.getText().equals("/generate_new_schedule")) {//"/generate_new_schedule"
             return generateNewScheduleSelected(message);
         }
-        else if(message.getText().equals("/view_courses")) {
+        else if(message.getText().equals(viewCoursesButton())||message.getText().equals("/view_courses")) {//"/view_courses"
             return viewCoursesSelected(message);
         }
-        else if(message.getText().equals("/calculate_gpa")) {
+        else if(message.getText().equals(calculateGpaButton())||message.getText().equals("/calculate_gpa")) {//"/calculate_gpa"
             return calculateGpaSelected(message);
         }
-        else if(message.getText().equals("/exams_menu")) {
+        else if(message.getText().equals(examsMenuButton())||message.getText().equals("/exams_menu")) {//"/exams_menu"
             return examsMenuSelected(message);
         }
-        else if(message.getText().equals("/add_suggestion")) {
+        else if(message.getText().equals(addSuggestionButton())||message.getText().equals("/add_suggestion")) {//"/add_suggestion"
             return addSuggestionSelected(message);
         }
         else if(message.getText().equals("/about")) {
@@ -320,7 +319,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return menuSelected(message);
     }
-    
+
     private SendMessage onAddSuggestion(Message message) {
         SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
         if(cancelMessage != null) return cancelMessage;
@@ -333,15 +332,15 @@ public class UniStudyBot extends TelegramLongPollingBot
         SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
         if(cancelMessage != null) return cancelMessage;
 
-        if(message.getText().equals("/count_gpa_new")) {
+        if(message.getText().equals(countGpaNewButton())||message.getText().equals("/count_gpa_new")) {//"/count_gpa_new"
             return selectGpaScaleSelected(message);
-        } else if(message.getText().equals("/see_gpa_previous")) {
+        } else if(message.getText().equals(seeGpaPreviousButton())||message.getText().equals("/see_gpa_previous")) {//"/see_gpa_previous"
             return seeGpaPreviousSelected(message);
-        } else if(message.getText().equals("/clear_gpa_data")) {
+        } else if(message.getText().equals(clearGpaDataButton())||message.getText().equals("/clear_gpa_data")) {//"/clear_gpa_data"
             return clearGpaDataSelected(message);
-        } else if(message.getText().equals("/count_gpa_current")) {
+        } else if(message.getText().equals(countGpaCurrentButton())||message.getText().equals("/count_gpa_current")) {//"/count_gpa_current"
             return selectGpaScaleSelected(message);
-        } else if(message.getText().equals("/delete_gpa_set")) {
+        } else if(message.getText().equals(deleteGpaSetButton())||message.getText().equals("/delete_gpa_set")) {//"/delete_gpa_set"
             return deleteGpaSetSelected(message);
         }
         return calculateGpaSelected(message);
@@ -354,11 +353,11 @@ public class UniStudyBot extends TelegramLongPollingBot
             throw new IllegalStateException("No correct gpa scale was specified in the reply message");
         }
         GpaCalculator gpaCalculator = null;
-        if(gpaScale.equals("4.0")) {
+        if(gpaScale.equals(GpaFourButton())||gpaScale.equals("4.0")) {//"4.0"
             gpaCalculator = new GpaFourZero();
-        } else if(gpaScale.equals("4.3")) {
+        } else if(gpaScale.equals(GpaFourPointThreeButton())||gpaScale.equals("4.3")) {//"4.3"
             gpaCalculator = new GpaFourThree();
-        } else if(gpaScale.equals("100%")) {
+        } else if(gpaScale.equals(GpaOneHundredButton())||gpaScale.equals("100%")) {//"100%"
             gpaCalculator = new GpaPercentage();
         } else {
             sendErrorMessage("Some error has occurred", message);
@@ -381,7 +380,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage cancelSelected(Message message, SendMessage toSend) {
-        if(message.getText().equals("/cancel")) {
+        if(message.getText().equals(cancelButton())||message.getText().equals("/cancel")) {//"/cancel"
             try {
                 SendMessage sendMessage = new SendMessage().setText("Cancelling..");
                 sendMessage.setReplyMarkup(new ReplyKeyboardRemove());
@@ -475,13 +474,13 @@ public class UniStudyBot extends TelegramLongPollingBot
     private SendMessage onExamsMenu(Message message) {
         SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
         if(cancelMessage != null) return cancelMessage;
-        if(message.getText().equals("/add_exam")) {
+        if(message.getText().equals(addExamButton())||message.getText().equals("/add_exam")) {//"/add_exam"
             return addExamSelected(message);
-        } else if(message.getText().equals("/view_exams")) {
+        } else if(message.getText().equals(viewExamsButton())||message.getText().equals("/view_exams")) {//"/view_exams"
             return viewExamsSelected(message);
-        } else if(message.getText().equals("/clear_exam_data")) {
+        } else if(message.getText().equals(clearExamDataButton())||message.getText().equals("/clear_exam_data")) {
             return clearExamDataSelected(message);
-        } else if(message.getText().equals("/delete_exam")) {
+        } else if(message.getText().equals(deleteExamButton())||message.getText().equals("/delete_exam")) {//"/delete_exam"
             return deleteExamSelected(message);
         }
         return examsMenuSelected(message);
@@ -531,7 +530,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             gpaCalculator.setCourses(courses);
             double gpa = gpaCalculator.calculate();
             System.out.println(gpa); // DEBUG ONLY
-            Database.getInstance().saveGpaSet(message.getFrom().getId(), gpa, message.getReplyToMessage().getText(), courses);
+            Database.getInstance().saveGpaSet(message.getFrom().getId(), gpa, getGpaScale(message.getReplyToMessage().getText()), courses);
             sendInfoMessage("Your overall GPA: " + gpa, message);
             return calculateGpaSelected(message);
         } catch(Exception e) { // TODO make an error format Exception
@@ -573,7 +572,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             gpaCalculator.setCourses(courses);
             double gpa = gpaCalculator.calculate();
             System.out.println(gpa); // DEBUG ONLY
-            Database.getInstance().saveGpaSet(message.getFrom().getId(), gpa, message.getReplyToMessage().getText(), courses);
+            Database.getInstance().saveGpaSet(message.getFrom().getId(), gpa, getGpaScale(message.getReplyToMessage().getText()), courses);
             sendInfoMessage("Your overall GPA: " + gpa, message);
             return calculateGpaSelected(message);
         } catch(Exception e) { // TODO make an error format Exception
@@ -587,7 +586,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         if(cancelMessage != null) return cancelMessage;
 
         String text = message.getText();
-        if(! text.equals("4.0") && ! text.equals("4.3") && ! text.equals("100%")) {
+        if(! text.equals(GpaFourButton()) && ! text.equals(GpaFourPointThreeButton()) && ! text.equals(GpaOneHundredButton())) {//"4.0" "4.3" "100%"
             return calculateGpaSelected(message);
         }
         if(state == COUNT_GPA_NEW) {
@@ -602,11 +601,11 @@ public class UniStudyBot extends TelegramLongPollingBot
         SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
         if(cancelMessage != null) return cancelMessage;
 
-        if(message.getText().equals("/add_course")) {
+        if(message.getText().equals(addCourseButton())||message.getText().equals("/add_course")) {//"/add_course"addCourseButton()
             return addCourseSelected(message);
-        } else if(message.getText().equals("/delete_course")) {
+        } else if(message.getText().equals(deleteCourseButton())||message.getText().equals("/delete_course")) {//"/delete_course"
             return deleteCourseSelected(message);
-        } else if(message.getText().equals("/view_courses")) {
+        } else if(message.getText().equals(viewCoursesButton())||message.getText().equals("/view_courses")) {//"/view_courses"
             return viewCoursesSelected(message);
         }
         return courseSettingsSelected(message);
@@ -620,7 +619,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         try {
             // TODO make preconditions checking
             String result = Scheduler.doWork(message.getText());
-            sendInfoMessage(result, message);            
+            sendInfoMessage(result, message);
             return menuSelected(message);
         } catch (Exception e) {
             e.printStackTrace(); // TODO
@@ -659,7 +658,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         // If something goes unexpected
         return courseSettingsSelected(message);
     }
-    
+
     private SendMessage onDeletingExam(Message message) {
         SendMessage cancelMessage = cancelSelected(message, examsMenuSelected(message));
         if(cancelMessage != null) return cancelMessage;
@@ -761,9 +760,11 @@ public class UniStudyBot extends TelegramLongPollingBot
             Database.getInstance().addTime(message.getFrom().getId(), courseName, dayOfWeek, startTime, endTime);
             return addTimeSelected(message, courseName).setText("Time was successfully added");
         } catch (IllegalArgumentException | NullPointerException e) {
+            logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
             ForceReplyKeyboard forceReplyKeyboard = new ForceReplyKeyboard();
             sendErrorMessage("Incorrect format", message);
             sendMessage.setText(reply.getText()).setReplyMarkup(forceReplyKeyboard);
+            Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADDING_TIME);
             return sendMessage;
         }
         catch (Exception e) {
@@ -782,7 +783,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return null;
     }
-    
+
     private SendMessage deleteExamSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Enter the exam name you want to delete, or a list of them\n"
@@ -792,7 +793,8 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), DELETING_EXAM);
         return sendMessage;
     }
-    
+
+
     private SendMessage aboutSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Telegram bot for efficient studying http://t.me/uni_study_bot\n"
@@ -806,7 +808,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         // TODO add more information and usage guides
         return sendMessage;
     }
-    
+
     private SendMessage clearExamDataSelected(Message message) {
         Database.getInstance().clearExamData(message.getFrom().getId());
         sendInfoMessage("All exam data has been deleted", message);
@@ -888,7 +890,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Select the GPA scale");
         sendMessage.setReplyMarkup(getGpaScaleKeyboard());
-        if(message.getText().equals("/count_gpa_current")) {
+        if(message.getText().equals(countGpaCurrentButton())||message.getText().equals("/count_gpa_current")) {//"/count_gpa_current"
             Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COUNT_GPA_CURRENT);
         } else {
             Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), COUNT_GPA_NEW);
@@ -1025,7 +1027,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADD_TIME);
         return sendMessage;
     }
-    
+
     private SendMessage addSuggestionSelected(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Please add your suggestions here\n"
@@ -1103,6 +1105,20 @@ public class UniStudyBot extends TelegramLongPollingBot
                 "!\nTo begin write /menu").setReplyMarkup(replyMarkup);
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), START_STATE);
         return sendMessage;
+    }
+
+    private String getGpaScale(String gpaScale){
+    	String answer="4.0";
+    	if(gpaScale.equals(GpaFourButton())||gpaScale.equals("4.0")) {					//"4.0"
+    		answer="4.0";
+        }
+    	else if(gpaScale.equals(GpaFourPointThreeButton())||gpaScale.equals("4.3")) {	//"4.3"
+        	answer="4.3";
+        }
+        else if(gpaScale.equals(GpaOneHundredButton())||gpaScale.equals("100%")) {		//"100%"
+        	answer="100%";
+        }
+    	return answer;
     }
 
     @Override

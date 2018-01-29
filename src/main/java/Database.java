@@ -17,7 +17,7 @@ public class Database
     private Logger logger = Logger.getLogger(Database.class.getName());
     private static volatile Connection connection;
     private static volatile Database instance;
-    
+
     private Database() {
         try {
             connection = DriverManager.getConnection(Consts.LINK_DB, Consts.USER_DB, Consts.PASSWORD_DB);
@@ -26,7 +26,7 @@ public class Database
         }
         createInitialTables();
     }
-    
+
     /* Singleton */
     public static Database getInstance() {
         Database localInstance = instance;
@@ -40,7 +40,7 @@ public class Database
         }
         return instance;
     }
-    
+
     private void createInitialTables() {
         try (Statement statement = connection.createStatement()) {
             connection.setAutoCommit(false); // TODO check
@@ -68,9 +68,9 @@ public class Database
             logger.log(Level.SEVERE, "Creation of initial tables was not successful", e);
         }
     }
-    
+
     public void addUser(int userId) {
-        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO users(user_id) VALUES(?) ON DUPLICATE KEY UPDATE last_activity=now()")) 
+        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO users(user_id) VALUES(?) ON DUPLICATE KEY UPDATE last_activity=now()"))
         {
             statement.setInt(1, userId);
             statement.executeUpdate();
@@ -79,9 +79,9 @@ public class Database
             logger.log(Level.SEVERE, "Error occurred while adding to users table", e);
         }
     }
-    
+
     public void addCourse(int userId, String name, int credits, String professor, String room) {
-        try (PreparedStatement statement = connection.prepareStatement("INSERT IGNORE INTO courses(name,user_id,credits,professor,room) VALUES(?,?,?,?,?)")) 
+        try (PreparedStatement statement = connection.prepareStatement("INSERT IGNORE INTO courses(name,user_id,credits,professor,room) VALUES(?,?,?,?,?)"))
         {
             statement.setString(1, name);
             statement.setInt(2, userId);
@@ -102,9 +102,9 @@ public class Database
             logger.log(Level.SEVERE, "Error occurred while intesrting to the courses table", e);
         }
     }
-    
+
     private void deleteNamesInTable(int userId, List<String> names, String table) {
-        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM " + table + " WHERE user_id=? AND name=?")) 
+        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM " + table + " WHERE user_id=? AND name=?"))
         {
             connection.setAutoCommit(false);
             for(String name : names) {
@@ -119,19 +119,19 @@ public class Database
             logger.log(Level.SEVERE, "Error occurred while deleting rows from the " + table + " table", e);
         }
     }
-    
+
     public void deleteCourses(int userId, List<String> names) {
         deleteNamesInTable(userId, names, "courses");
     }
-    
+
     public void deleteExams(int userId, List<String> names) {
         deleteNamesInTable(userId, names, "exams");
     }
-    
+
     public void addCourse(int userId, String name, int credits) {
         addCourse(userId, name, credits, null, null);
     }
-    
+
     public int getState(int userId, Long chatId) {
         int state = 0;
         try(PreparedStatement statement = connection.prepareStatement("SELECT state FROM states WHERE user_id=? AND chat_id=?")) {
@@ -146,7 +146,7 @@ public class Database
         }
         return state;
     }
-    
+
     public void setState(int userId, Long chatId, int state) {
         try(PreparedStatement statement = connection.prepareStatement("REPLACE INTO states(user_id,chat_id,state) VALUES(?,?,?)")) {
             statement.setInt(1, userId);
@@ -158,7 +158,7 @@ public class Database
             e.printStackTrace();
         }
     }
-  
+
     public void addSuggestion(int userId, String suggestion) {
         String query = "INSERT INTO suggestions(user_id,text) SELECT ?,? WHERE "
                 + "(SELECT count(*) FROM (SELECT post_date FROM suggestions WHERE "
@@ -174,11 +174,11 @@ public class Database
             e.printStackTrace();
         }
     }
-    
+
     public boolean existCourseNames(int userId, Collection<String> names) {
         return existNamesInTable(userId, names, "courses");
     }
-    
+
     private static String fillWithQmarks(String string, int size) {
         StringBuilder query = new StringBuilder(string);
         boolean isFirst = false;
@@ -194,7 +194,7 @@ public class Database
         query.append(")");
         return query.toString();
     }
-    
+
     private static boolean existNamesInTable(int userId, Collection<String> names, String table) {
         if(names.isEmpty()) return false;
         String query = fillWithQmarks("SELECT count(*) FROM " + table + " WHERE user_id=? AND name IN", names.size());
@@ -217,11 +217,11 @@ public class Database
         }
         return false;
     }
-    
+
     public boolean existExamNames(int userId, Collection<String> names) {
         return existNamesInTable(userId, names, "exams");
     }
-    
+
     public void updateTotalPrepLevel(int examId) {
         try(PreparedStatement statement = connection.prepareStatement("UPDATE exams SET total_prep_level=(SELECT AVG(level) FROM prepared_for WHERE exam_id=?) WHERE exam_id=?")) {
             statement.setInt(1, examId);
@@ -234,7 +234,7 @@ public class Database
             e.printStackTrace();
         }
     }
-    
+
     public int getTotalPrepLevel(int examId) {
         try(PreparedStatement statement = connection.prepareStatement("SELECT total_prep_level FROM exams WHERE exam_id=?")) {
             statement.setInt(1, examId);
@@ -247,7 +247,7 @@ public class Database
         }
         return 0;
     }
-    
+
     public void addCourseToExam(int examId, String courseNmae, int prepLevel) {
         try (PreparedStatement statement = connection.prepareStatement("INSERT INTO prepared_for(exam_id,course_name,level) VALUES(?,?,?) ON DUPLICATE KEY "
                 + "UPDATE level=?")) {
@@ -263,9 +263,9 @@ public class Database
             e.printStackTrace();
         }
     }
-    
+
     public void addTime(int userId, String name, String day, String startTime, String endTime) {
-        try (PreparedStatement statement = connection.prepareStatement("INSERT IGNORE INTO times(user_id,name,day,start_time,end_time) VALUES(?,?,?,?,?)")) 
+        try (PreparedStatement statement = connection.prepareStatement("INSERT IGNORE INTO times(user_id,name,day,start_time,end_time) VALUES(?,?,?,?,?)"))
         {
             statement.setInt(1, userId);
             statement.setString(2, name);
@@ -278,7 +278,7 @@ public class Database
             logger.log(Level.SEVERE, "Error occurred while intesrting to the times table", e);
         }
     }
-    
+
     public List<Course> getAllCourseNameCredits(int userId) {
         try(PreparedStatement statement = connection.prepareStatement("SELECT name,credits FROM courses "
                 + "WHERE user_id=? ORDER BY name ASC")) {
@@ -295,13 +295,13 @@ public class Database
         }
         return null;
     }
-    
+
     public int getNoOfGpaSets(int userId) {
         try (PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) as total FROM gpa_sets WHERE user_id=?")) {
             statement.setInt(1, userId);
             logger.log(Level.INFO, "Getting count of rows from gpa_sets table");
             ResultSet resultSet = statement.executeQuery();
-            if(resultSet.next()) { 
+            if(resultSet.next()) {
                 return resultSet.getInt("total");
             } else {
                 throw new SQLException("Couldn't select from gpa_sets, the next() returns false");
@@ -311,7 +311,7 @@ public class Database
         }
         return -1;
     }
-    
+
     public void deleteGpaSets(List<Integer> setIds, int userId) {
         try (PreparedStatement statement = connection.prepareStatement("DELETE FROM gpa_sets WHERE set_id=? AND user_id=?")){
             connection.setAutoCommit(false);
@@ -327,7 +327,7 @@ public class Database
             logger.log(Level.SEVERE, "Error occurred while deleting data from gpa_sets table", e);
         }
     }
-    
+
     public void clearGpaData(int userId) {
         try (PreparedStatement statement = connection.prepareStatement("DELETE FROM gpa_sets WHERE user_id=?")){
             statement.setInt(1, userId);
@@ -337,9 +337,9 @@ public class Database
             logger.log(Level.SEVERE, "Error occurred while deleting data from gpa_sets table", e);
         }
     }
-    
+
     public void saveGpaSet(int userId, double gpa, String gpaScale, List<Course> courses) { // TODO pass GpaSet object
-        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO gpa_sets(user_id,gpa,gpa_scale) VALUES(?,?,?)", Statement.RETURN_GENERATED_KEYS)) 
+        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO gpa_sets(user_id,gpa,gpa_scale) VALUES(?,?,?)", Statement.RETURN_GENERATED_KEYS))
         {
             statement.setInt(1, userId);
             statement.setDouble(2, gpa);
@@ -373,11 +373,11 @@ public class Database
             logger.log(Level.SEVERE, "Error occurred saving GPA sets", e);
         }
     }
-    
+
     public List<GpaSet> getGpaSets(int userId) { // TODO delete old timestamps 365 days
         List<GpaSet> gpaSets = new ArrayList<>();
         try (PreparedStatement statement = connection.prepareStatement("SELECT gpa_sets.*,name,credits,letter FROM gpa_sets LEFT JOIN "
-                + "gpa_set_courses on gpa_set_courses.set_id=gpa_sets.set_id WHERE gpa_sets.user_id=? ORDER BY gpa_sets.set_id", 
+                + "gpa_set_courses on gpa_set_courses.set_id=gpa_sets.set_id WHERE gpa_sets.user_id=? ORDER BY gpa_sets.set_id",
                 ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)) {
             statement.setInt(1, userId);
             ResultSet resultSet = statement.executeQuery();
@@ -410,7 +410,7 @@ public class Database
         }
         return gpaSets;
     }
-    
+
     public String getAllCoursesAsString(int userId) {
         try(PreparedStatement statement = connection.prepareStatement("SELECT courses.*,times.day,times.start_time,times.end_time FROM `courses` LEFT JOIN"
                 + " `times` on courses.name=times.name and courses.user_id=times.user_id WHERE courses.user_id=? ORDER BY name ASC")) {
@@ -443,7 +443,7 @@ public class Database
         }
         return null;
     }
-    
+
     public List<Exam> getExams(int userId) {
         List<Exam> exams = new ArrayList<>();
         try(PreparedStatement statement = connection.prepareStatement("SELECT exams.*,course_name,level FROM exams LEFT JOIN prepared_for ON exams.exam_id=prepared_for.exam_id "
@@ -478,7 +478,7 @@ public class Database
         }
         return exams;
     }
-    
+
     public int addExam(Exam exam) {
         try (PreparedStatement statement = connection.prepareStatement("INSERT INTO exams(user_id,name,date,total_prep_level) VALUES(?,?,?,?)", Statement.RETURN_GENERATED_KEYS)) {
             statement.setInt(1, exam.getUserId());
@@ -491,22 +491,22 @@ public class Database
             }
             ResultSet resultSet = statement.getGeneratedKeys();
             if(resultSet.next()) {
-                return resultSet.getInt(1); 
+                return resultSet.getInt(1);
             }
         } catch(SQLException e) {
             e.printStackTrace();
         }
         return -1;
     }
-    
+
     public void clearExamData(int userId) {
-        try (PreparedStatement statement = connection.prepareStatement("DELETE * FROM exams WHERE user_id=?")) {
+        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM exams WHERE user_id=?")) {
             statement.setInt(1, userId);
             statement.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-    
-    
+
+
 }

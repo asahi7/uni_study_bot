@@ -28,6 +28,9 @@ dependencies {
     compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.6'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.0'
 
+ 	//emojis
+    compile 'com.vdurmont:emoji-java:4.0.0'
+
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'
 }

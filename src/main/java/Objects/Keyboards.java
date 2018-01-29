@@ -3,6 +3,7 @@ import org.telegram.telegrambots.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import java.util.List;
 import java.util.ArrayList;
 import org.telegram.telegrambots.api.objects.replykeyboard.buttons.KeyboardRow;
+import static Objects.TextOnButtons.*;
 
 public class Keyboards
 {
@@ -11,128 +12,131 @@ public class Keyboards
         replyMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
         KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("/add_exam");
+        keyboardRow.add(addExamButton());//"/add_exam"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/view_exams");
+        keyboardRow.add(viewExamsButton());//"/view_exams"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/delete_exam");
+        keyboardRow.add(deleteExamButton());//"/delete_exam"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/clear_exam_data");
+        keyboardRow.add(clearExamDataButton());//"/clear_exam_data"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/cancel");
+        keyboardRow.add(cancelButton());//"/cancel"
         keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
         return replyMarkup;
     }
-    
+
+    //more attention
+
     public static ReplyKeyboardMarkup getAddTimeKeyboard(String courseName) {
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
         replyMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
         KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("/add_time " + courseName);
+        keyboardRow.add("/add_time " + courseName);//"/add_time " + courseName
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/cancel");
+        keyboardRow.add(cancelButton());//"/cancel"
         keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
         return replyMarkup;
     }
-    
+
     public static ReplyKeyboardMarkup getCalculateGpaKeyboard() {
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
         replyMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
         KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("/count_gpa_new");
+        keyboardRow.add(countGpaNewButton());//"/count_gpa_new"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/count_gpa_current");
+        keyboardRow.add(countGpaCurrentButton());//"/count_gpa_current"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/see_gpa_previous");
+        keyboardRow.add(seeGpaPreviousButton());//"/see_gpa_previous"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/delete_gpa_set");
+        keyboardRow.add(deleteGpaSetButton());//"/delete_gpa_set"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/clear_gpa_data");
+        keyboardRow.add(clearGpaDataButton());//"/clear_gpa_data"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/cancel");
+        keyboardRow.add(cancelButton());//"/cancel"
         keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
         return replyMarkup;
     }
-    
+
     public static ReplyKeyboardMarkup getGpaScaleKeyboard() {
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
         replyMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
         KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("4.0");
+        keyboardRow.add(GpaFourButton());//"4.0"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("4.3");
+        keyboardRow.add(GpaFourPointThreeButton());//"4.3"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("100%");
+        keyboardRow.add(GpaOneHundredButton());//"100%"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/cancel");
+        keyboardRow.add(cancelButton());//"/cancel"
         keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
         return replyMarkup;
     }
-      
+
     public static ReplyKeyboardMarkup getCourseSettingsKeyboard() {
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
         replyMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
         KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("/add_course");
+        keyboardRow.add(addCourseButton());//"/add_course" no addCourseButton()
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/delete_course");
+        keyboardRow.add(deleteCourseButton());//"/delete_course"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/view_courses");
+        keyboardRow.add(viewCoursesButton());//"/view_courses"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/cancel");
+        keyboardRow.add(cancelButton());//"/cancel"
         keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
         return replyMarkup;
     }
-    
+
     public static ReplyKeyboardMarkup getMenuKeyboard() {
+    	KeyboardRow keyboardRow;
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
         replyMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add("/course_settings");
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add(viewCoursesButton());//"/view_courses"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/view_courses");
+        keyboardRow.add(generateNewScheduleButton());//"/generate_new_schedule"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/generate_new_schedule");
+        keyboardRow.add(calculateGpaButton());//"/calculate_gpa"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/calculate_gpa");
+        keyboardRow.add(examsMenuButton());//"/exams_menu"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/exams_menu");
+        keyboardRow.add(courseSettingsButton());//"/course_settings"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/add_suggestion");
+        keyboardRow.add(addSuggestionButton());//"/add_suggestion"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
-        keyboardRow.add("/about");
+        keyboardRow.add(aboutButton());//"/about"
         keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
         return replyMarkup;
