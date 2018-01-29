@@ -1,4 +1,3 @@
-import org.apache.commons.io.monitor.FileAlterationListener;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
@@ -8,7 +7,6 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 
 import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
 
 import GpaCalculator.*;
 
@@ -19,12 +17,10 @@ import java.util.logging.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.xml.crypto.Data;
-
 import static Utilities.Keyboards.*;
 import static Utilities.TextOnButtons.*;
 
-import java.sql.SQLException;
+import java.lang.reflect.Method;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -34,7 +30,6 @@ import MakeSchedule.Course;
 import MakeSchedule.Scheduler;
 import Objects.Exam;
 import Objects.GpaSet;
-
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -321,7 +316,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onAddSuggestion(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "menuSelected");
         if(cancelMessage != null) return cancelMessage;
         Database.getInstance().addSuggestion(message.getFrom().getId(), message.getText());
         sendInfoMessage("Thank you for your time!", message);
@@ -329,7 +324,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onCalculateGpa(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "menuSelected");
         if(cancelMessage != null) return cancelMessage;
 
         if(message.getText().equals(countGpaNewButton())||message.getText().equals("/count_gpa_new")) {//"/count_gpa_new"
@@ -379,13 +374,21 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
     }
 
-    private SendMessage cancelSelected(Message message, SendMessage toSend) {
-        if(message.getText().equals(cancelButton())||message.getText().equals("/cancel")) {//"/cancel"
+    private SendMessage cancelSelected(Message message, String method) {
+        if(message.getText().equals(cancelButton()) || message.getText().equals("/cancel")) {
             try {
                 SendMessage sendMessage = new SendMessage().setText("Cancelling..");
                 sendMessage.setReplyMarkup(new ReplyKeyboardRemove());
                 sendMessage.setChatId(message.getChatId());
                 execute(sendMessage);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            SendMessage toSend = new SendMessage();
+            try {
+                Method func = this.getClass().getDeclaredMethod(method, Message.class);
+                func.setAccessible(true);
+                toSend = (SendMessage) func.invoke(this, message);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -395,7 +398,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onAddingCourseToExam(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "menuSelected");
         if(cancelMessage != null) return cancelMessage;
         int examId = -1;
         try {
@@ -436,20 +439,26 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onAddingExam(Message message) { // TODO
-        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "menuSelected");
         if(cancelMessage != null) return cancelMessage;
         try {
             Splitter splitter = Splitter.on(",").trimResults().omitEmptyStrings();
             List<String> examInputs = splitter.splitToList(message.getText());
             // Midterm,17.04.2018,100
-            String regex = "^\\s*(3[01]|[12][0-9]|0?[1-9])\\.(1[012]|0?[1-9])\\.((?:19|20)\\d{2})\\s*$";
-            if(! Pattern.matches(regex, examInputs.get(1))) {
-                throw new IllegalArgumentException("Regex doesn't match date format");
+            Timestamp timestamp = new Timestamp(new Date().getTime());
+            if(examInputs.size() > 1) {
+                String regex = "^\\s*(3[01]|[12][0-9]|0?[1-9])\\.(1[012]|0?[1-9])\\.((?:19|20)\\d{2})\\s*$";
+                if(! Pattern.matches(regex, examInputs.get(1))) {
+                    throw new IllegalArgumentException("Regex doesn't match date format");
+                }
+                DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+                Date date = dateFormat.parse(examInputs.get(1));
+                timestamp = new Timestamp(date.getTime());
             }
-            DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
-            Date date = dateFormat.parse(examInputs.get(1));
-            Timestamp timestamp = new Timestamp(date.getTime());
-            int prepLevel = Integer.parseInt(examInputs.get(2));
+            int prepLevel = 0;
+            if(examInputs.size() > 2) {
+                prepLevel = Integer.parseInt(examInputs.get(2));
+            }
             if(prepLevel < 0 || prepLevel > 100) {
                 throw new IllegalArgumentException("The prepLevel parameter must be in range [0-100]");
             }
@@ -472,7 +481,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onExamsMenu(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "menuSelected");
         if(cancelMessage != null) return cancelMessage;
         if(message.getText().equals(addExamButton())||message.getText().equals("/add_exam")) {//"/add_exam"
             return addExamSelected(message);
@@ -487,7 +496,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onDeleteGpaSet(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, calculateGpaSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "calculateGpaSelected");
         if(cancelMessage != null) return cancelMessage;
         try {
             Splitter splitter = Splitter.on(CharMatcher.whitespace()).trimResults().omitEmptyStrings();
@@ -506,7 +515,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onCountingGpaNew(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, calculateGpaSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "calculateGpaSelected");
         if(cancelMessage != null) return cancelMessage;
         try {
             Splitter splitter = Splitter.on(';').trimResults().omitEmptyStrings();
@@ -546,7 +555,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onCountingGpaCurrent(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, calculateGpaSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "calculateGpaSelected");
         if(cancelMessage != null) return cancelMessage;
         List<Course> courses = Database.getInstance().getAllCourseNameCredits(message.getFrom().getId());
         if(courses.isEmpty()) {
@@ -582,7 +591,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onSelectGpaScale(Message message, final int state) {
-        SendMessage cancelMessage = cancelSelected(message, calculateGpaSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "calculateGpaSelected");
         if(cancelMessage != null) return cancelMessage;
 
         String text = message.getText();
@@ -598,7 +607,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onCourseSettings(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "menuSelected");
         if(cancelMessage != null) return cancelMessage;
 
         if(message.getText().equals(addCourseButton())||message.getText().equals("/add_course")) {//"/add_course"addCourseButton()
@@ -613,7 +622,7 @@ public class UniStudyBot extends TelegramLongPollingBot
 
     private SendMessage onGeneratingNewSchedule(Message message)
     {
-        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "menuSelected");
         if(cancelMessage != null) return cancelMessage;
 
         try {
@@ -629,7 +638,7 @@ public class UniStudyBot extends TelegramLongPollingBot
 
     // TODO make courseName case-insensitive
     private SendMessage onAddingCourse(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, courseSettingsSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "courseSettingsSelected");
         if(cancelMessage != null) return cancelMessage;
 
         try {
@@ -660,7 +669,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onDeletingExam(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, examsMenuSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "examsMenuSelected");
         if(cancelMessage != null) return cancelMessage;
         try {
             Splitter splitter = Splitter.on(",").trimResults().omitEmptyStrings();
@@ -688,7 +697,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onDeletingCourse(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, courseSettingsSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "courseSettingsSelected");
         if(cancelMessage != null) return cancelMessage;
 
         try {
@@ -717,7 +726,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     }
 
     private SendMessage onAddingTime(Message message) { // TODO make adding time with commas
-        SendMessage cancelMessage = cancelSelected(message, courseSettingsSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "courseSettingsSelected");
         if(cancelMessage != null) return cancelMessage;
         SendMessage sendMessage = new SendMessage();
         String courseName = null;
@@ -775,7 +784,7 @@ public class UniStudyBot extends TelegramLongPollingBot
 
     /* /add_time courseName */
     private SendMessage onAddTime(Message message) {
-        SendMessage cancelMessage = cancelSelected(message, courseSettingsSelected(message));
+        SendMessage cancelMessage = cancelSelected(message, "courseSettingsSelected");
         if(cancelMessage != null) return cancelMessage;
 
         if(message.getText().split(" ")[0].equals("/add_time")) {
