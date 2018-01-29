@@ -31,6 +31,7 @@ import MakeSchedule.Course;
 import MakeSchedule.Scheduler;
 import Objects.Exam;
 import Objects.GpaSet;
+import Objects.Keyboards;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -60,6 +61,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     private static final int EXAMS_MENU = 14;
     private static final int ADDING_EXAM = 15;
     private static final int ADDING_COURSE_TO_EXAM = 16;
+    private static final int DELETING_EXAM = 17;
 
     public String getStateFromInt(int state) {
         String result = "";
@@ -115,6 +117,9 @@ public class UniStudyBot extends TelegramLongPollingBot
             case 16:
                 result = "ADDING_COURSE_TO_EXAM";
                 break;
+            case 17:
+                result = "DELETING_EXAM";
+                break;
             default:
                 result = "YOU FORGOT TO ADD DESCRIPTION OF THE COMMAND!";
                 break;
@@ -137,6 +142,9 @@ public class UniStudyBot extends TelegramLongPollingBot
                 break;
             case "/view_courses":
                 sendMessage = viewCoursesSelected(message);
+                break;
+            case "/view_exams":
+                sendMessage = viewExamsSelected(message);
                 break;
             case "/calculate_gpa":
                 sendMessage = calculateGpaSelected(message);
@@ -225,6 +233,9 @@ public class UniStudyBot extends TelegramLongPollingBot
                     break;
                 case ADDING_COURSE_TO_EXAM:
                     sendMessage = onAddingCourseToExam(message);
+                    break;
+                case DELETING_EXAM:
+                    sendMessage = onDeletingExam(message);
                     break;
                 default:
                     sendMessage = onDefault(message);
@@ -443,13 +454,11 @@ public class UniStudyBot extends TelegramLongPollingBot
         if(message.getText().equals("/add_exam")) {
             return addExamSelected(message);
         } else if(message.getText().equals("/view_exams")) {
-            return viewExamsSelected(message); // TODO
+            return viewExamsSelected(message);
         } else if(message.getText().equals("/clear_exam_data")) {
-            sendInfoMessage("TODO", message);
-          //  return clearExamDataSelected(message); // TODO
+            return clearExamDataSelected(message);
         } else if(message.getText().equals("/delete_exam")) {
-           // return deleteExamSelected(message); // TODO
-            sendInfoMessage("TODO", message);
+            return deleteExamSelected(message);
         }
         return examsMenuSelected(message);
     }
@@ -464,7 +473,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             for(int i = 0; i < inputString.size(); i++) {
                 setIds.add(Integer.parseInt(inputString.get(i)));
             }
-            Database.getInstance().deleteGpaSets(setIds);
+            Database.getInstance().deleteGpaSets(setIds, message.getFrom().getId());
             sendInfoMessage("You have successfully deleted GPA sets", message);
         } catch (NumberFormatException e) {
             logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
@@ -626,6 +635,34 @@ public class UniStudyBot extends TelegramLongPollingBot
         // If something goes unexpected
         return courseSettingsSelected(message);
     }
+    
+    private SendMessage onDeletingExam(Message message) {
+        SendMessage cancelMessage = cancelSelected(message, examsMenuSelected(message));
+        if(cancelMessage != null) return cancelMessage;
+        try {
+            Splitter splitter = Splitter.on(",").trimResults().omitEmptyStrings();
+            List<String> strings = splitter.splitToList(message.getText());
+            Preconditions.checkArgument(strings.size() > 0);
+            if(! Database.getInstance().existExamNames(message.getFrom().getId(), strings)) {
+                throw new NoSuchElementException("Exams with given names do not exist");
+            }
+            Database.getInstance().deleteExams(message.getFrom().getId(), strings);
+            return examsMenuSelected(message).setText("Exams were successfully deleted");
+        } catch (NoSuchElementException e) {
+            logger.log(Level.INFO, "This message was passed: " + message.getText() + "\nFrom user: " + message.getFrom().getId(), e);
+            sendErrorMessage("Exam does not exist", message);
+            return deleteExamSelected(message);
+        } catch(IllegalArgumentException e) {
+            logger.log(Level.INFO, "This message was passed: " + message.getText() + "\nFrom user: " + message.getFrom().getId(), e);
+            sendErrorMessage("Incorrect format", message);
+            return deleteExamSelected(message);
+        }
+        catch(Exception e) {
+            logger.log(Level.WARNING, "This message was passed: " + message.getText() + "\n From user: " + message.getFrom().getId(), e);
+        }
+        // If something goes unexpected
+        return examsMenuSelected(message);
+    }
 
     private SendMessage onDeletingCourse(Message message) {
         SendMessage cancelMessage = cancelSelected(message, courseSettingsSelected(message));
@@ -638,10 +675,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             if(! Database.getInstance().existCourseNames(message.getFrom().getId(), strings)) {
                 throw new NoSuchElementException("Courses with given names do not exist");
             }
-            for(int i = 0; i < strings.size(); i++) {
-                String name = strings.get(i);
-                Database.getInstance().deleteCourse(message.getFrom().getId(), name); // TODO make deleteCourses -> one row
-            }
+            Database.getInstance().deleteCourses(message.getFrom().getId(), strings);
             return courseSettingsSelected(message).setText("Courses were successfully deleted");
         } catch (NoSuchElementException e) {
             logger.log(Level.INFO, "This message was passed: " + message.getText() + "\nFrom user: " + message.getFrom().getId(), e);
@@ -724,11 +758,28 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         return null;
     }
+    
+    private SendMessage deleteExamSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Enter the exam name you want to delete, or a list of them\n"
+                + "Example: Midterm,Finals,Quiz I\n"
+                + "Write the exact name as written in /view_exams\n"
+                + "Or write /cancel to go to previous menu");
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), DELETING_EXAM);
+        return sendMessage;
+    }
+    
+    private SendMessage clearExamDataSelected(Message message) {
+        Database.getInstance().clearExamData(message.getFrom().getId());
+        sendInfoMessage("All exam data has been deleted", message);
+        return examsMenuSelected(message);
+    }
 
     private SendMessage viewExamsSelected(Message message) {
         List<Exam> exams = Database.getInstance().getExams(message.getFrom().getId());
         StringBuilder msg = new StringBuilder();
         DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+        SendMessage sendMessage = new SendMessage();
         for(int i = 0; i < exams.size(); i++) {
             msg.append("{\n");
             Exam exam = exams.get(i);
@@ -740,8 +791,15 @@ public class UniStudyBot extends TelegramLongPollingBot
             }
             msg.append("}\n");
         }
-        sendInfoMessage(msg.toString(), message);
-        return examsMenuSelected(message);
+        if(exams.isEmpty()) {
+            sendMessage.setText("You don't have exams yet");
+        } else {
+            sendMessage.setText(msg.toString());
+        }
+        if(Database.getInstance().getState(message.getFrom().getId(), message.getChatId()) == EXAMS_MENU) {
+            sendMessage.setReplyMarkup(getExamsMenuKeyboard());
+        }
+        return sendMessage;
     }
 
     private SendMessage addCourseToExamSelected(Message message, int examId) {

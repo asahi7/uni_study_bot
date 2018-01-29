@@ -101,16 +101,29 @@ public class Database
         }
     }
     
-    public void deleteCourse(int userId, String name) {
-        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM courses WHERE user_id=? AND name=?")) 
+    private void deleteNamesInTable(int userId, List<String> names, String table) {
+        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM " + table + " WHERE user_id=? AND name=?")) 
         {
-            statement.setString(2, name);
-            statement.setInt(1, userId);
-            statement.execute();
-            logger.log(Level.INFO, "Deleting courses from courses table");
+            connection.setAutoCommit(false);
+            for(String name : names) {
+                statement.setString(2, name);
+                statement.setInt(1, userId);
+                statement.execute();
+            }
+            connection.commit();
+            connection.setAutoCommit(true);
+            logger.log(Level.INFO, "Deleting " + table + " from courses table");
         } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Error occurred while deleting rows from the courses table", e);
+            logger.log(Level.SEVERE, "Error occurred while deleting rows from the " + table + " table", e);
         }
+    }
+    
+    public void deleteCourses(int userId, List<String> names) {
+        deleteNamesInTable(userId, names, "courses");
+    }
+    
+    public void deleteExams(int userId, List<String> names) {
+        deleteNamesInTable(userId, names, "exams");
     }
     
     public void addCourse(int userId, String name, int credits) {
@@ -145,10 +158,14 @@ public class Database
     }
   
     public boolean existCourseNames(int userId, Collection<String> names) {
-        if(names.isEmpty()) return false;
-        StringBuilder query = new StringBuilder("SELECT count(*) FROM courses WHERE user_id=? AND name IN (");
+        return existNamesInTable(userId, names, "courses");
+    }
+    
+    private static String fillWithQmarks(String string, int size) {
+        StringBuilder query = new StringBuilder(string);
         boolean isFirst = false;
-        for(String name : names) {
+        query.append(" (");
+        for(int i = 0; i < size; i++) {
             if(! isFirst) {
                 isFirst = true;
             } else {
@@ -157,7 +174,13 @@ public class Database
             query.append("?");
         }
         query.append(")");
-        try(PreparedStatement statement = connection.prepareStatement(query.toString())){
+        return query.toString();
+    }
+    
+    private static boolean existNamesInTable(int userId, Collection<String> names, String table) {
+        if(names.isEmpty()) return false;
+        String query = fillWithQmarks("SELECT count(*) FROM " + table + " WHERE user_id=? AND name IN", names.size());
+        try(PreparedStatement statement = connection.prepareStatement(query)){
             statement.setInt(1, userId);
             int i = 2;
             for(String name : names) {
@@ -175,6 +198,10 @@ public class Database
             e.printStackTrace();
         }
         return false;
+    }
+    
+    public boolean existExamNames(int userId, Collection<String> names) {
+        return existNamesInTable(userId, names, "exams");
     }
     
     public void updateTotalPrepLevel(int examId) {
@@ -267,11 +294,12 @@ public class Database
         return -1;
     }
     
-    public void deleteGpaSets(List<Integer> setIds) {
-        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM gpa_sets WHERE set_id=?")){
+    public void deleteGpaSets(List<Integer> setIds, int userId) {
+        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM gpa_sets WHERE set_id=? AND user_id=?")){
             connection.setAutoCommit(false);
             for(int i = 0; i < setIds.size(); i++) {
                 statement.setInt(1, setIds.get(i));
+                statement.setInt(2, userId);
                 statement.execute();
             }
             connection.commit();
@@ -452,4 +480,15 @@ public class Database
         }
         return -1;
     }
+    
+    public void clearExamData(int userId) {
+        try (PreparedStatement statement = connection.prepareStatement("DELETE * FROM exams WHERE user_id=?")) {
+            statement.setInt(1, userId);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    
 }
