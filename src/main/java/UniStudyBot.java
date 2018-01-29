@@ -267,17 +267,6 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
     }
 
-    private List<String> splitInputAddEmptyStrings(Message message, int emptyStringsNum) {
-        Splitter splitter = Splitter.on(',').trimResults();
-        List<String> strings = Lists.newArrayList((splitter.splitToList(message.getText())));
-        List<String> emptyStrings = new ArrayList<>();
-        for(int i = 0; i < emptyStringsNum; i++) {
-            emptyStrings.add("");
-        }
-        strings.addAll(emptyStrings);
-        return strings;
-    }
-
     private SendMessage onDefault(Message message) {
         if(message.getText().equals("/menu")) {
             return menuSelected(message);
@@ -378,7 +367,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         try {
             examId = Integer.parseInt(message.getReplyToMessage().getText());
             // Biology,88 Literature,99
-            Splitter splitter = Splitter.on(CharMatcher.whitespace()).trimResults().omitEmptyStrings();
+            Splitter splitter = Splitter.on(';').trimResults().omitEmptyStrings();
             List<String> courses = splitter.splitToList(message.getText());
             Map<String, Integer> courseMap = new HashMap<>();
             Splitter splitter2 = Splitter.on(",").trimResults().omitEmptyStrings();
@@ -488,7 +477,7 @@ public class UniStudyBot extends TelegramLongPollingBot
         SendMessage cancelMessage = cancelSelected(message, calculateGpaSelected(message));
         if(cancelMessage != null) return cancelMessage;
         try {
-            Splitter splitter = Splitter.on(CharMatcher.whitespace()).trimResults().omitEmptyStrings();
+            Splitter splitter = Splitter.on(';').trimResults().omitEmptyStrings();
             List<String> courseInputs = splitter.splitToList(message.getText());
             checkLimitsOfGpaData(courseInputs, message);
             GpaCalculator gpaCalculator = getGpaCalculator(message);
@@ -597,10 +586,9 @@ public class UniStudyBot extends TelegramLongPollingBot
 
         try {
             // TODO make preconditions checking
-            SendMessage sendMessage = new SendMessage();
             String result = Scheduler.doWork(message.getText());
-            sendMessage.setText(result);
-            return sendMessage;
+            sendInfoMessage(result, message);            
+            return menuSelected(message);
         } catch (Exception e) {
             e.printStackTrace(); // TODO
         }
@@ -613,17 +601,22 @@ public class UniStudyBot extends TelegramLongPollingBot
         if(cancelMessage != null) return cancelMessage;
 
         try {
-            List<String> strings = splitInputAddEmptyStrings(message, 4);
+            Splitter splitter = Splitter.on(',').trimResults().omitEmptyStrings();
+            List<String> strings = splitter.splitToList(message.getText());
             String name = strings.get(0);
             int credits = Integer.parseInt(strings.get(1));
-            Preconditions.checkArgument(! name.equals("") && name != null);
             Preconditions.checkArgument(credits > 0 && credits < 100);
-            String professor = strings.get(2).equals("") ? null : strings.get(2);
-            String room = strings.get(3).equals("") ? null : strings.get(3);
+            String professor = null, room = null;
+            if(strings.size() > 2) {
+                professor = strings.get(2);
+            }
+            if(strings.size() > 3) {
+                room = strings.get(3);
+            }
             Database.getInstance().addCourse(message.getFrom().getId(), name, credits, professor, room);
             // TODO Maybe setReplyToMessageId is not necessary
             return addTimeSelected(message, name).setText(name + " was successfully added");
-        } catch(IllegalArgumentException e) {
+        } catch(IllegalArgumentException | IndexOutOfBoundsException e) {
             logger.log(Level.INFO, "This message was passed: " + message.getText() + "\nFrom user: " + message.getFrom().getId(), e);
             return addCourseSelected(message);
         }
@@ -639,7 +632,8 @@ public class UniStudyBot extends TelegramLongPollingBot
         if(cancelMessage != null) return cancelMessage;
 
         try {
-            List<String> strings = splitInputAddEmptyStrings(message, 0);
+            Splitter splitter = Splitter.on(",").trimResults().omitEmptyStrings();
+            List<String> strings = splitter.splitToList(message.getText());
             Preconditions.checkArgument(strings.size() > 0);
             if(! Database.getInstance().existCourseNames(message.getFrom().getId(), strings)) {
                 throw new NoSuchElementException("Courses with given names do not exist");
@@ -668,7 +662,6 @@ public class UniStudyBot extends TelegramLongPollingBot
     private SendMessage onAddingTime(Message message) { // TODO make adding time with commas
         SendMessage cancelMessage = cancelSelected(message, courseSettingsSelected(message));
         if(cancelMessage != null) return cancelMessage;
-
         SendMessage sendMessage = new SendMessage();
         String courseName = null;
         Message reply;
@@ -681,15 +674,19 @@ public class UniStudyBot extends TelegramLongPollingBot
             // TODO change to regular expressions
             courseName = reply.getText().split("\n")[0];
             courseName = courseName.split(": ")[1];
-            Preconditions.checkNotNull(courseName);
-            Preconditions.checkArgument(! courseName.equals(""));
+            List<String> courses = new ArrayList<>();
+            courses.add(courseName);
+            if(Database.getInstance().existCourseNames(message.getFrom().getId(), courses) == false) {
+                throw new IllegalArgumentException("Given course name does not exist");
+            }
             System.out.println(courseName); // DEBUG ONLY
         } catch (Exception e) {
+            sendErrorMessage("The course you are adding to does not exist", message);
             return courseSettingsSelected(message);
         }
         try {
-            List<String> strings = splitInputAddEmptyStrings(message, 3);
-            Preconditions.checkArgument(! strings.get(0).equals(""));
+            Splitter splitter = Splitter.on(",").trimResults().omitEmptyStrings();
+            List<String> strings = splitter.splitToList(message.getText());
             String dayOfWeek = strings.get(0).toLowerCase();
             dayOfWeek = Character.toUpperCase(dayOfWeek.charAt(0)) + dayOfWeek.substring(1); // TODO unicode?
             System.out.println(dayOfWeek); // DEBUG ONLY
@@ -758,8 +755,9 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         String msg = "Write courses you want to add to the exam in the following format:\n"
                    + "COURSE_NAME,PREPARATION_LEVEL\n"
-                   + "Example: Biology,88 Literature,99\n"
-                   + "Note: The PREPARATION_LEVEL's range is [0-100]. COURSE_NAME must match one of your existing courses\n"
+                   + "Example: Biology,88 ; Literature,99\n"
+                   + "Note: The PREPARATION_LEVEL's range is [0-100]. COURSE_NAME must match one of your existing courses. "
+                   + "Put ';' as a separator between courses\n"
                    + "Or write /cancel to go to previous menu";
         sendInfoMessage(msg, message);
         sendMessage.setText(Integer.toString(examId)).setReplyMarkup(new ForceReplyKeyboard());
@@ -815,7 +813,8 @@ public class UniStudyBot extends TelegramLongPollingBot
         sendMessage.setReplyToMessageId(message.getMessageId());
         String info = "Write a list of courses in the following format:\n"
                 + "COURSE_NAME,NUM_OF_CREDITS,LETTER_GRADE\n"
-                + "Example: Calculus,3,A Philosophy,3,B+\n"
+                + "Example: Calculus,3,A ; Philosophy,3,B+\n"
+                + "Note: Put ';' as a separator between courses. "
                 + "Any whitespace characters between courses will do\n"
                 + "Or write /cancel to go to previous menu";
         sendInfoMessage(info, message);
