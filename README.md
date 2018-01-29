@@ -6,11 +6,30 @@ With this compact, convenient and free to use bot you can improve your universit
 ## Current Features
 
   1. Manage your course data
+
+  ![ ](alpha_release_demo_files/courseManagement.gif)
+
+  
   2. Calculate expected GPAs
+
+  ![ ](alpha_release_demo_files/calculateGpa.gif)
+
+
   3. Generate course schedules needed for online course registrations
+
+  ![ ](alpha_release_demo_files/generateNewSchedule.gif)
+
+
   4. Manage exams: include preparation level for each course (We believe this is a good tool to motivate yourself)
+
+  ![ ](alpha_release_demo_files/manageYourExams.gif)
+
+  
   5. There are more things to come!
   
+  ![ ](alpha_release_demo_files/aboutThisApp.gif)
+  
+
 ## Issues and Suggestions
 If you have a suggestion or noticed a bug in the bot, please post [here](https://github.com/asahi7/uni_study_bot/issues), you are also welcome to join [chat](https://t.me/uni_study_bot_group)
 
