@@ -1,9 +1,9 @@
-package Objects;
+package Utilities;
 import org.telegram.telegrambots.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import java.util.List;
 import java.util.ArrayList;
 import org.telegram.telegrambots.api.objects.replykeyboard.buttons.KeyboardRow;
-import static Objects.TextOnButtons.*;
+import static Utilities.TextOnButtons.*;
 
 public class Keyboards
 {
@@ -29,8 +29,6 @@ public class Keyboards
         replyMarkup.setKeyboard(keyboardRows);
         return replyMarkup;
     }
-
-    //more attention
 
     public static ReplyKeyboardMarkup getAddTimeKeyboard(String courseName) {
         ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup();
