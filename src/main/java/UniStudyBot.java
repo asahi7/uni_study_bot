@@ -156,6 +156,9 @@ public class UniStudyBot extends TelegramLongPollingBot
             case "/add_course":
                 sendMessage = addCourseSelected(message);
                 break;
+            case "/about":
+                sendMessage = aboutSelected(message);
+                break;
             default:
                 sendMessage = null;
                 break;
@@ -311,6 +314,9 @@ public class UniStudyBot extends TelegramLongPollingBot
         }
         else if(message.getText().equals("/add_suggestion")) {
             return addSuggestionSelected(message);
+        }
+        else if(message.getText().equals("/about")) {
+            return aboutSelected(message);
         }
         return menuSelected(message);
     }
@@ -784,6 +790,20 @@ public class UniStudyBot extends TelegramLongPollingBot
                 + "Write the exact name as written in /view_exams\n"
                 + "Or write /cancel to go to previous menu");
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), DELETING_EXAM);
+        return sendMessage;
+    }
+    
+    private SendMessage aboutSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Telegram bot for efficient studying http://t.me/uni_study_bot\n"
+                + "With this compact, convenient and free to use bot you can improve your university life!\n"
+                + "1. Manage your course data\n"
+                + "2. Calculate expected GPAs\n"
+                + "3. Generate course schedules needed for online course registrations\n"
+                + "4. Manage exams: include preparation level for each course (We believe this is a good tool to motivate yourself)\n"
+                + "5. There are more things to come!\n"
+                + "View on github: https://github.com/asahi7/uni_study_bot");
+        // TODO add more information and usage guides
         return sendMessage;
     }
     
