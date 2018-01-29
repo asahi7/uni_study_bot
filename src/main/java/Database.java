@@ -60,6 +60,8 @@ public class Database
             statement.executeUpdate(CreateTablesStrings.CREATE_EXAMS_TABLE);
             logger.log(Level.INFO, "Creating (if not already) initial prepared_for table");
             statement.executeUpdate(CreateTablesStrings.CREATE_PREPARED_FOR_TABLE);
+            logger.log(Level.INFO, "Creating (if not already) initial suggestions table");
+            statement.executeUpdate(CreateTablesStrings.CREATE_SUGGESTIONS_TABLE);
             connection.commit();
             connection.setAutoCommit(true);
         } catch (SQLException e) {
@@ -157,6 +159,22 @@ public class Database
         }
     }
   
+    public void addSuggestion(int userId, String suggestion) {
+        String query = "INSERT INTO suggestions(user_id,text) SELECT ?,? WHERE "
+                + "(SELECT count(*) FROM (SELECT post_date FROM suggestions WHERE "
+                + "user_id=? ORDER BY post_date DESC LIMIT 1) as data WHERE post_date <= NOW() - INTERVAL 1 MINUTE) = 1 "
+                + "OR (SELECT count(*) FROM suggestions WHERE user_id=?) = 0";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, userId);
+            statement.setString(2, suggestion);
+            statement.setInt(3, userId);
+            statement.setInt(4, userId);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
     public boolean existCourseNames(int userId, Collection<String> names) {
         return existNamesInTable(userId, names, "courses");
     }

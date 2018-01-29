@@ -62,6 +62,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     private static final int ADDING_EXAM = 15;
     private static final int ADDING_COURSE_TO_EXAM = 16;
     private static final int DELETING_EXAM = 17;
+    private static final int ADD_SUGGESTION = 18;
 
     public String getStateFromInt(int state) {
         String result = "";
@@ -119,6 +120,9 @@ public class UniStudyBot extends TelegramLongPollingBot
                 break;
             case 17:
                 result = "DELETING_EXAM";
+                break;
+            case 18:
+                result = "ADD_SUGGESTION";
                 break;
             default:
                 result = "YOU FORGOT TO ADD DESCRIPTION OF THE COMMAND!";
@@ -237,6 +241,9 @@ public class UniStudyBot extends TelegramLongPollingBot
                 case DELETING_EXAM:
                     sendMessage = onDeletingExam(message);
                     break;
+                case ADD_SUGGESTION:
+                    sendMessage = onAddSuggestion(message);
+                    break;
                 default:
                     sendMessage = onDefault(message);
                     break;
@@ -302,6 +309,17 @@ public class UniStudyBot extends TelegramLongPollingBot
         else if(message.getText().equals("/exams_menu")) {
             return examsMenuSelected(message);
         }
+        else if(message.getText().equals("/add_suggestion")) {
+            return addSuggestionSelected(message);
+        }
+        return menuSelected(message);
+    }
+    
+    private SendMessage onAddSuggestion(Message message) {
+        SendMessage cancelMessage = cancelSelected(message, menuSelected(message));
+        if(cancelMessage != null) return cancelMessage;
+        Database.getInstance().addSuggestion(message.getFrom().getId(), message.getText());
+        sendInfoMessage("Thank you for your time!", message);
         return menuSelected(message);
     }
 
@@ -985,6 +1003,14 @@ public class UniStudyBot extends TelegramLongPollingBot
         SendMessage sendMessage = new SendMessage();
         sendMessage.setReplyMarkup(getAddTimeKeyboard(courseName));
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADD_TIME);
+        return sendMessage;
+    }
+    
+    private SendMessage addSuggestionSelected(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Please add your suggestions here\n"
+                + "Or write /cancel to go to previous menu");
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), ADD_SUGGESTION);
         return sendMessage;
     }
 

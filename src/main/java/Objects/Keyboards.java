@@ -128,6 +128,9 @@ public class Keyboards
         keyboardRow = new KeyboardRow();
         keyboardRow.add("/exams_menu");
         keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
+        keyboardRow.add("/add_suggestion");
+        keyboardRows.add(keyboardRow);
         replyMarkup.setKeyboard(keyboardRows);
         return replyMarkup;
     }

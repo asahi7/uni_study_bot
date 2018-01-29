@@ -59,4 +59,10 @@ public class CreateTablesStrings
             + "FOREIGN KEY(exam_id) REFERENCES exams(exam_id) ON DELETE CASCADE,"
             + "FOREIGN KEY(course_name) REFERENCES courses(name) ON DELETE CASCADE,"
             + "CONSTRAINT constr4 PRIMARY KEY(exam_id,course_name))"; 
+    public static final String CREATE_SUGGESTIONS_TABLE = "CREATE TABLE IF NOT EXISTS suggestions ("
+            + "suggestion_id INTEGER AUTO_INCREMENT PRIMARY KEY,"
+            + "text TEXT NOT NULL,"
+            + "user_id INTEGER NOT NULL,"
+            + "FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,"
+            + "post_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP)";
 }
