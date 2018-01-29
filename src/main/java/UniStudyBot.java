@@ -21,6 +21,9 @@ import java.util.regex.Pattern;
 
 import javax.xml.crypto.Data;
 
+import static Utilities.Keyboards.*;
+import static Utilities.TextOnButtons.*;
+
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DateFormat;
@@ -31,13 +34,10 @@ import MakeSchedule.Course;
 import MakeSchedule.Scheduler;
 import Objects.Exam;
 import Objects.GpaSet;
-import Objects.Keyboards;
+
 
 import java.util.*;
 import java.util.Map.Entry;
-
-import static Objects.Keyboards.*;
-import static Objects.TextOnButtons.*;
 
 public class UniStudyBot extends TelegramLongPollingBot
 {
