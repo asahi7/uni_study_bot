@@ -3,7 +3,7 @@ Telegram bot for efficient studying http://t.me/uni_study_bot
 
 With this compact, convenient and free to use bot you can improve your university life!
 
-## Current features
+## Current Features
 
   1. Manage your course data
   2. Calculate expected GPAs
