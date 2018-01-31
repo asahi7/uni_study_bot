@@ -138,6 +138,9 @@ public class Scheduler {
         if(!(lines.length>0)){
     		return false;
     	}
+        if(lines.length>10){
+    		return false;
+    	}
         /*//Nothing in input */
         /*//Extract lines */
 
