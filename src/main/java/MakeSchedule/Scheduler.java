@@ -138,7 +138,12 @@ public class Scheduler {
         if(!(lines.length>0)){
     		return false;
     	}
-        /*//Nothing in input */
+        /* Nothing in input */
+        /* Too many courses */
+        if(lines.length>10){
+        	return false;
+        }
+        /* Too many courses */
         /*//Extract lines */
 
         /* Extract Name and Timeslots */
@@ -162,6 +167,11 @@ public class Scheduler {
             }
             /*//no timeslots */
 
+            /* Too many timeSlotsOptions */
+            if(timeSlotsOptions.length>6){
+            	return false;
+            }
+            /* Too many timeSlotsOptions*/
             for(int j = 0; j< timeSlotsOptions.length; j++){
             	if(timeSlotsOptions[j].length()==0){
             		continue;
@@ -192,6 +202,7 @@ public class Scheduler {
                     }
                     /*//Incorrect time format */
                  }
+
             }
              /*//Extract timeslots */
         }

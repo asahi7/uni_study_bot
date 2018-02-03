@@ -13,18 +13,18 @@ public class schedulerTest {
 				+ "\n"
 				+"Literature:(Monday 22:00-23:00)";
 		String testResult =
-				"~"
+				"~ Combination 1 ~"
 				+"\n"
-				+"Math:(Monday 19:00 - 20:00)"
+				+"Math: (Monday 19:00 - 20:00)"
 				+"\n"
-				+"Literature:(Monday 22:00 - 23:00)"
+				+"Literature: (Monday 22:00 - 23:00)"
+				+"\n"+"\n"
+				+"~ Combination 2 ~"
 				+"\n"
-				+"~"
+				+"Math: (Monday 19:00 - 20:00)"
 				+"\n"
-				+"Math:(Monday 19:00 - 20:00)"
-				+"\n"
-				+"Literature:(Monday 22:00 - 23:00)"
-				+"\n";
+				+"Literature: (Monday 22:00 - 23:00)"
+				+"\n"+"\n";
 		String result = sc.doWork(testInput);
 		assertEquals(result, testResult);
 	}
@@ -36,12 +36,12 @@ public class schedulerTest {
 				+ "\n"
 				+"Literature:(Monday 22:00-23:00)";
 		String testResult =
-				"~"
+				"~ Combination 1 ~"
 				+"\n"
-				+"Math:(Monday 19:00 - 20:00)"
+				+"Math: (Monday 19:00 - 20:00)"
 				+"\n"
-				+"Literature:(Monday 22:00 - 23:00)"
-				+"\n"
+				+"Literature: (Monday 22:00 - 23:00)"
+				+"\n" +"\n"
 				;
 		String result = sc.doWork(testInput);
 		assertEquals(result, testResult);
@@ -74,10 +74,10 @@ public class schedulerTest {
 		String testInput =
 				"Math:(Monday 19:00-20:00)(Monday 19:00-20:00) "+ "\n"
 						+" ";
-		String testResult = "~" + "\n"
-				+ "Math:(Monday 19:00 - 20:00)"+ "\n"
-				+ "~" + "\n"
-				+ "Math:(Monday 19:00 - 20:00)"+ "\n"
+		String testResult = "~ Combination 1 ~" + "\n"
+				+ "Math: (Monday 19:00 - 20:00)"+ "\n"+"\n"
+				+ "~ Combination 2 ~" + "\n"
+				+ "Math: (Monday 19:00 - 20:00)"+ "\n" +"\n"
 				;
 		String result = sc.doWork(testInput);
 		assertEquals(result, testResult);
@@ -124,9 +124,9 @@ public class schedulerTest {
 		String testInput =
 				"Math: (Monday 10:30-12:30, Tuesday 10:30 -12:30) (Monday 12:30-14:40)"+ "\n"
 						+"Literature: (Monday  12:30-14:40)";
-		String testResult = "~" + "\n"+
-				"Math:(Monday 10:30 - 12:30,Tuesday 10:30 - 12:30)"+ "\n"+
-				"Literature:(Monday 12:30 - 14:40)"+ "\n"
+		String testResult = "~ Combination 1 ~" + "\n"+
+				"Math: (Monday 10:30 - 12:30,Tuesday 10:30 - 12:30)"+ "\n"+
+				"Literature: (Monday 12:30 - 14:40)"+ "\n"+ "\n"
 				;
 		String result = sc.doWork(testInput);
 		assertEquals(result, testResult);
@@ -140,11 +140,11 @@ public class schedulerTest {
 		                "English:(Tuesday 9:00-12:00,Thursday 9:00-12:00)" + "\n"+
 		                "Literature:(Monday 12:00-15:00,Wednesday 12:00  -  15:00)(Tuesday 12:00-15:00)" + "\n"+
 		                "History:(Tuesday 12:00-15:00,Thursday 9:00-15:00)(Wednesday 12:00-15:00)";
-		String testResult = "~" + "\n"+
-				"Math:(Monday 9:00 - 12:00,Wednesday 9:00 - 12:00)"+ "\n"+
-				"English:(Thursday 9:00 - 12:00,Tuesday 9:00 - 12:00)"+ "\n"+
-				"Literature:(Tuesday 12:00 - 15:00)"+ "\n"+
-				"History:(Wednesday 12:00 - 15:00)"+ "\n"
+		String testResult =  "~ Combination 1 ~" + "\n"+
+				"Math: (Monday 9:00 - 12:00,Wednesday 9:00 - 12:00)"+ "\n"+
+				"English: (Thursday 9:00 - 12:00,Tuesday 9:00 - 12:00)"+ "\n"+
+				"Literature: (Tuesday 12:00 - 15:00)"+ "\n"+
+				"History: (Wednesday 12:00 - 15:00)"+ "\n"+"\n"
 				;
 		String result = sc.doWork(testInput);
 		assertEquals(result, testResult);
@@ -157,26 +157,44 @@ public class schedulerTest {
 				"General Biology:(Monday 10:30-11:45, Wednesday 10:30-11:45)(Monday 13:00-14:15, Wednesday 13:00-14:15)" + "\n"+
 		                "GeneralChemistry:(Tuesday 9:00-11:30)(Tuesday 13:00-15:30)(Wednesday 9:00-11:30)";
 		String testResult =
-				"~" + "\n"+
-				"GeneralBiology:(Monday 10:30 - 11:45,Wednesday 10:30 - 11:45)"+ "\n"+
-				"GeneralChemistry:(Tuesday 9:00 - 11:30)"+ "\n"+
-				"~" + "\n"+
-				"GeneralBiology:(Monday 10:30 - 11:45,Wednesday 10:30 - 11:45)"+ "\n"+
-				"GeneralChemistry:(Tuesday 13:00 - 15:30)"+ "\n"+
-				"~" + "\n"+
-				"GeneralBiology:(Monday 13:00 - 14:15,Wednesday 13:00 - 14:15)"+ "\n"+
-				"GeneralChemistry:(Tuesday 9:00 - 11:30)"+ "\n"+
-				"~" + "\n"+
-				"GeneralBiology:(Monday 13:00 - 14:15,Wednesday 13:00 - 14:15)"+ "\n"+
-				"GeneralChemistry:(Tuesday 13:00 - 15:30)"+ "\n"+
-				"~" + "\n"+
-				"GeneralBiology:(Monday 13:00 - 14:15,Wednesday 13:00 - 14:15)"+ "\n"+
-				"GeneralChemistry:(Wednesday 9:00 - 11:30)"+ "\n"
+				"~ Combination 1 ~" + "\n"+
+				"GeneralBiology: (Monday 10:30 - 11:45,Wednesday 10:30 - 11:45)"+ "\n"+
+				"GeneralChemistry: (Tuesday 9:00 - 11:30)"+ "\n"+"\n"+
+				"~ Combination 2 ~" + "\n"+
+				"GeneralBiology: (Monday 10:30 - 11:45,Wednesday 10:30 - 11:45)"+ "\n"+
+				"GeneralChemistry: (Tuesday 13:00 - 15:30)"+ "\n"+"\n"+
+				"~ Combination 3 ~" + "\n"+
+				"GeneralBiology: (Monday 13:00 - 14:15,Wednesday 13:00 - 14:15)"+ "\n"+
+				"GeneralChemistry: (Tuesday 9:00 - 11:30)"+ "\n"+"\n"+
+				"~ Combination 4 ~" + "\n"+
+				"GeneralBiology: (Monday 13:00 - 14:15,Wednesday 13:00 - 14:15)"+ "\n"+
+				"GeneralChemistry: (Tuesday 13:00 - 15:30)"+ "\n"+"\n"+
+				"~ Combination 5 ~" + "\n"+
+				"GeneralBiology: (Monday 13:00 - 14:15,Wednesday 13:00 - 14:15)"+ "\n"+
+				"GeneralChemistry: (Wednesday 9:00 - 11:30)"+ "\n"+"\n"
 				;
 		String result = sc.doWork(testInput);
 		assertEquals(result, testResult);
 	}
 
+	@Test
+	public void testLogic11(){
+		String testInput =
+				"Math:(Monday 00:00-01:00)(Monday 01:00-02:00)"
+				+ "(Monday 02:00-03:00)"
+				+ "(Monday 04:00-05:00)";
+		String testResult =
+				"~ Combination 1 ~\n"+
+				"Math: (Monday 00:00 - 1:00)\n\n"+
+				"~ Combination 2 ~\n"+
+				"Math: (Monday 1:00 - 2:00)\n\n"+
+				"~ Combination 3 ~\n"+
+				"Math: (Monday 2:00 - 3:00)\n\n"+
+				"~ Combination 4 ~\n"+
+				"Math: (Monday 4:00 - 5:00)\n\n";
+		String result = sc.doWork(testInput);
+		assertEquals(result, testResult);
+	}
 
 	@Test
 	public void testStructure1(){
@@ -277,5 +295,18 @@ public class schedulerTest {
 		assertEquals(result, testResult);
 	}
 
+
+	@Test
+	public void testStructure9(){
+		String testInput =
+				"Math:(Monday 00:00-01:00)(Monday 01:00-02:00)"
+				+ "(Monday 02:00-03:00)(Monday 04:00-05:00)"
+				+ "(Monday 05:00-06:00)"+ "(Monday 06:00-07:00)";
+		String testResult =
+				"No schedule for these courses can be constructed. Delete or change a course"
+				;
+		String result = sc.doWork(testInput);
+		assertEquals(result, testResult);
+	}
 
 }
