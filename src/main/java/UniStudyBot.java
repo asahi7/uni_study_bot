@@ -1,4 +1,12 @@
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
+import org.telegram.telegrambots.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.api.objects.replykeyboard.ForceReplyKeyboard;
@@ -20,12 +28,15 @@ import java.util.regex.Pattern;
 import static Utilities.Keyboards.*;
 import static Utilities.TextOnButtons.*;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 
+import TimetableGenerator.DrawTimetable;
 import MakeSchedule.Course;
 import MakeSchedule.Scheduler;
 import Objects.Exam;
@@ -59,6 +70,7 @@ public class UniStudyBot extends TelegramLongPollingBot
     private static final int ADDING_COURSE_TO_EXAM = 16;
     private static final int DELETING_EXAM = 17;
     private static final int ADD_SUGGESTION = 18;
+    private static final int GET_TIMETABLE = 19;
 
     public String getStateFromInt(int state) {
         String result = "";
@@ -120,6 +132,10 @@ public class UniStudyBot extends TelegramLongPollingBot
             case 18:
                 result = "ADD_SUGGESTION";
                 break;
+            case 19:
+                result = "GET_TIMETABLE";
+                break;
+
             default:
                 result = "YOU FORGOT TO ADD DESCRIPTION OF THE COMMAND!";
                 break;
@@ -208,6 +224,9 @@ public class UniStudyBot extends TelegramLongPollingBot
                 case GENERATING_NEW_SCHEDULE:
                     sendMessage = onGeneratingNewSchedule(message);
                     break;
+                case GET_TIMETABLE:
+                    sendMessage = onGettingTimetable(message);
+                    break;
                 case CALCULATE_GPA:
                     sendMessage = onCalculateGpa(message);
                     break;
@@ -293,6 +312,9 @@ public class UniStudyBot extends TelegramLongPollingBot
     private SendMessage onMainMenu(Message message) {
         if(message.getText().equals(courseSettingsButton())||message.getText().equals("/course_settings")) {//"/course_settings"
             return courseSettingsSelected(message);
+        }
+        else if(message.getText().equals(timetableButton())||message.getText().equals("/timetable")) {//"/course_settings"
+            return timetableSelected(message);
         }
         else if(message.getText().equals(generateNewScheduleButton())||message.getText().equals("/generate_new_schedule")) {//"/generate_new_schedule"
             return generateNewScheduleSelected(message);
@@ -634,6 +656,49 @@ public class UniStudyBot extends TelegramLongPollingBot
             e.printStackTrace(); // TODO
         }
         return menuSelected(message);
+    }
+
+    private SendMessage onGettingTimetable(Message message)
+    {
+        SendMessage cancelMessage = cancelSelected(message, "menuSelected");
+        boolean ans = false;;
+        if(cancelMessage != null) return cancelMessage;
+        try {
+    		DrawTimetable t = new DrawTimetable();
+        	long chat_id = message.getChatId();
+    		String data = message.getText();
+    		String chatId = Long.toString(chat_id);
+        	String path = "timetables"+File.separator;
+        	String imgName =  chatId +".png";
+    		String filePath = path+imgName;
+        	ans = t.createTimetableForPhone(data, filePath);
+            sendInfoMessage((ans? "Get your image\n":"Please, check your input\n"), message);
+            sendImageUploadingAFile(filePath,  chatId);
+            try {
+            	File f = new File(filePath);
+            	if(f.exists() && !f.isDirectory()) {
+            	    f.delete();
+            	}
+            } catch (Exception e) {
+                e.printStackTrace(); // TODO
+            }
+            return menuSelected(message);
+        } catch (Exception e) {
+            e.printStackTrace(); // TODO
+        }
+        sendInfoMessage("Please, check your input\n", message);
+        return menuSelected(message);
+    }
+
+    private void sendImageUploadingAFile(String filePath, String chatId) {
+    	 SendPhoto sendPhotoRequest = new SendPhoto();
+         sendPhotoRequest.setChatId(chatId);
+         sendPhotoRequest.setNewPhoto(new File(filePath));
+         try {
+             sendPhoto(sendPhotoRequest);
+         } catch (TelegramApiException e) {
+             e.printStackTrace();
+         }
     }
 
     // TODO make courseName case-insensitive
@@ -1078,6 +1143,21 @@ public class UniStudyBot extends TelegramLongPollingBot
                 + "Every time slot option should be enclosed in brackets. \n"
                 + "Or write /cancel to go to previous menu");
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), GENERATING_NEW_SCHEDULE);
+        return sendMessage;
+    }
+
+    private SendMessage timetableSelected(Message message) {
+    	SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Personalize your mobile device\n"
+                + "by setting your everyday plans to your phone backgorund. \n"
+                + "Just send all your plans in following format to get a backround image\n"
+                + "Gym: Tuesday 23:30\n"
+                + "Gym: Thursday 23:30\n"
+                + "Math: Monday 10:30\n"
+                + "Every new plan should start from new line. \n"
+                + "Every action should be separated from its time by a colon \':\'. \n"
+                + "Or write /cancel to go to previous menu");
+        Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), GET_TIMETABLE);
         return sendMessage;
     }
 
