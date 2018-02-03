@@ -47,15 +47,16 @@ public class TimeSlotOptions {
 
     public String getTimeSlotOptionString(){
         TimeSlotOptions timeSlots = this;
-        StringBuilder time = new StringBuilder("(");
+        StringBuilder time = new StringBuilder("");
+       // time.append("(");
         for(String key: timeSlots.getTimeSlots().keySet()){
             for(int i=0; i < timeSlots.getTimeSlots().get(key).size(); i++){
                 time.append(key +" " +(timeSlots.getTimeSlots().get(key).get(i)).getTimeString());
-                time.append(",");
+                time.append(", ");
             }
         }
-        time = new StringBuilder(time.substring(0, time.length()-1));
-        time.append(")");
+        time = new StringBuilder(time.substring(0, time.length()-2));
+      //  time.append(")");
         return time.toString();
     }
 
