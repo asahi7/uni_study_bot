@@ -128,6 +128,9 @@ public class Keyboards
         keyboardRow.add(examsMenuButton());//"/exams_menu"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();
+        keyboardRow.add(timetableButton());//"/timetable" timetableButton()
+        keyboardRows.add(keyboardRow);
+        keyboardRow = new KeyboardRow();
         keyboardRow.add(courseSettingsButton());//"/course_settings"
         keyboardRows.add(keyboardRow);
         keyboardRow = new KeyboardRow();

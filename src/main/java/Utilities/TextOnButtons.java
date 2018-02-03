@@ -116,6 +116,10 @@ public class TextOnButtons {
         return EmojiParser.parseToUnicode((":grey_question:"+"About this app"));
     }
 
+	public static String timetableButton(){
+        return EmojiParser.parseToUnicode((":iphone:"+"Get Timetable"));
+    }
+
 	public static String addSuggestionButton(){
         return EmojiParser.parseToUnicode((":heart:"+"Your suggestions"));
     }

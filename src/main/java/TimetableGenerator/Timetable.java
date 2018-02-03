@@ -51,7 +51,7 @@ public class Timetable {
                 }
                 timeRecord = record.toString();								// delete whitespaces in timeRecord
 
-                if(timeRecord.length()>9) {									//extract time and day from timeRecord
+                if(timeRecord.length()>7) {									//extract time and day from timeRecord
                     Pattern pattern = Pattern.compile("([01]?[0-9]|2[0-3]):[0-5][0-9]-([01]?[0-9]|2[0-3]):[0-5][0-9]");
                     Matcher matcher = pattern.matcher(record);
                     if (matcher.find()) {
