@@ -301,11 +301,10 @@ public class schedulerTest {
 		String testInput =
 				"Math:(Monday 00:00-01:00)(Monday 01:00-02:00)"
 				+ "(Monday 02:00-03:00)"
-				+ "(Monday 04:00-05:00)";//+ "(Monday 05:00-06:00)"
+				+ "(Monday 04:00-05:00)"+ "(Monday 05:00-06:00)";
 		String testResult =
 				"No schedule for these courses can be constructed. Delete or change a course"
 				;
-		System.out.println("Start test");
 		String result = sc.doWork(testInput);
 		assertEquals(result, testResult);
 	}

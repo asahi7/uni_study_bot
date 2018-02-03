@@ -167,17 +167,12 @@ public class Scheduler {
             }
             /*//no timeslots */
 
-            /* Too timeSlotsOptions */
-            if(timeSlotsOptions.length>5){
+            /* Too many timeSlotsOptions */
+            if(timeSlotsOptions.length>6){
             	return false;
             }
-            /* Too timeSlotsOptions*/
-            System.out.print(" \n\n"+input+" \n");
-
+            /* Too many timeSlotsOptions*/
             for(int j = 0; j< timeSlotsOptions.length; j++){
-
-            	System.out.print(timeSlotsOptions[j]+"__");
-
             	if(timeSlotsOptions[j].length()==0){
             		continue;
             	}
@@ -207,7 +202,7 @@ public class Scheduler {
                     }
                     /*//Incorrect time format */
                  }
-                System.out.print(timeSlotsOptions.length<=5);
+
             }
              /*//Extract timeslots */
         }
