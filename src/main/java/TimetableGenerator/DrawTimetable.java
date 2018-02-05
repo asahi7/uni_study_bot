@@ -25,6 +25,8 @@ public class DrawTimetable {
 		 /* every block y contains dayOfWeek, plan lines.(Thus 275 = 20*10 + 4*10+ 25*1+10*1)*/
 		 /* Thus fontsize of plan is 20, space between lines 4,fontsize of dayofweek is 25, space between lines 10*/
 		 /* Average phone's screen sizes */
+		 boolean ans = false;
+
 		 int width = 750;
 	     int height = 1200;
 
@@ -136,7 +138,11 @@ public class DrawTimetable {
 	    	 }
 	     }
 	     /* write image to file */
-	     return writeImageToFile(image, imageName);
+
+	     ans = writeImageToFile(image, imageName);
+	     graphics.dispose();
+	     image.flush();
+	     return ans;
 	}
 
 	private boolean writeImageToFile(BufferedImage image, String imageName){

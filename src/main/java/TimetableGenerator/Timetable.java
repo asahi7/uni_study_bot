@@ -26,9 +26,31 @@ public class Timetable {
 		return record.toString();
 	}
 
+	private String extractFromInlineInput(String input){
+		String ans = "";
+		String delim1 = "[\n]";												// extract lines
+        String[] lines = input.split(delim1);
+        for(int l = 0; l<lines.length; l++){								// if there are lines
+        	String delim2 = "[:]";
+        	String[] inputPlanTime = (lines[l]).split(delim2,2);			// divide to name and time by splitting by :
+        	if(inputPlanTime.length==2){
+        		String plan = inputPlanTime[0];
+        		String delim3 = "[,]";
+        		String[] times =  inputPlanTime[1].split(delim3);
+        		for(int t =0; t<times.length; t++){
+        			ans+=plan+":"+times[t]+"\n";
+        		}
+        	}
+
+        }
+		return ans;
+	}
+
 	public ArrayList< Pair<Integer, Pair<Integer,Pair<String , String>>>> prepareData(String input){
 
 		ArrayList<Pair<Integer, Pair<Integer,Pair<String , String>>>> answer = new ArrayList<>();// <day,< starttime, <str plan, str time> >
+
+		input =  extractFromInlineInput(input);
 
 		String delim1 = "[\n]";												// extract lines
         String[] lines = input.split(delim1);

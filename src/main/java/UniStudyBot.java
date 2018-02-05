@@ -38,6 +38,9 @@ import Objects.GpaSet;
 import java.util.*;
 import java.util.Map.Entry;
 
+
+import com.vdurmont.emoji.EmojiParser;
+
 public class UniStudyBot extends TelegramLongPollingBot
 {
     private Logger logger = Logger.getLogger(UniStudyBot.class.getName());
@@ -672,6 +675,7 @@ public class UniStudyBot extends TelegramLongPollingBot
             	if(f.exists() && !f.isDirectory()) {
             	    f.delete();
             	}
+
             } catch (Exception e) {
                 e.printStackTrace(); // TODO
             }
@@ -1141,15 +1145,19 @@ public class UniStudyBot extends TelegramLongPollingBot
 
     private SendMessage timetableSelected(Message message) {
     	SendMessage sendMessage = new SendMessage();
-        sendMessage.setText("Personalize your mobile device\n"
+        String msg = "Personalize your mobile device\n"
                 + "by setting your everyday plans to your phone backgorund. \n"
-                + "Just send all your plans in following format to get a backround image\n"
-                + "Gym: Tuesday 23:30\n"
-                + "Gym: Thursday 23:30\n"
-                + "Math: Monday 10:30\n"
+                + "Just send all your plans in following format to get a backround image:\n"
+                + "\nGym: tue 23:30, mon 21:00 \n"
+                + "Math: monday 10:30\n\n"
+                + "or just copy your schedule combination \nfrom \":spiral_note_pad:Generate New Schedule\":\n"
+                + "\n~ Combination 2 ~\n"
+                + "Computer Science: Thursday 9:00 - 10:15, Tuesday 9:00 - 10:15\n"
+                + "Calculus: Monday 9:00 - 10:15, Wednesday 9:00 - 10:15 \n\n"
                 + "Every new plan should start from new line. \n"
                 + "Every action should be separated from its time by a colon \':\'. \n"
-                + "Or write /cancel to go to previous menu");
+                + "Or write /cancel to go to previous menu";
+        sendMessage.setText(EmojiParser.parseToUnicode(msg));
         Database.getInstance().setState(message.getFrom().getId(), message.getChatId(), GET_TIMETABLE);
         return sendMessage;
     }
