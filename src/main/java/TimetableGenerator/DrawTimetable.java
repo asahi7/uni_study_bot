@@ -139,9 +139,9 @@ public class DrawTimetable {
 	     }
 	     /* write image to file */
 
-	     ans = writeImageToFile(image, imageName);
-	     graphics.dispose();
 	     image.flush();
+	     graphics.dispose();
+	     ans = writeImageToFile(image, imageName);
 	     return ans;
 	}
 
