@@ -10,12 +10,8 @@ public class CreateTablesStrings
             + "credits INTEGER NOT NULL DEFAULT 0,"
             + "user_id INTEGER NOT NULL,"
             + "FOREIGN KEY(user_id) REFERENCES users(user_id),"
-           // + "letter VARCHAR(3),"
             + "room VARCHAR(255),"
             + "professor VARCHAR(255),"
-          //  + "four_zero DECIMAL(3,2)," // TODO delete this
-          //  + "four_three DECIMAL(3,2),"
-          //  + "percentage INTEGER(3),"
             + "CONSTRAINT constr2 PRIMARY KEY(name,user_id))";
     public final static String CREATE_TIMES_TABLE = "CREATE TABLE IF NOT EXISTS times ("
             + "section_id INTEGER AUTO_INCREMENT PRIMARY KEY,"
@@ -35,7 +31,7 @@ public class CreateTablesStrings
     public final static String CREATE_GPA_SETS_TABLE = "CREATE TABLE IF NOT EXISTS gpa_sets ("
             + "user_id INTEGER NOT NULL,"
             + "set_id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,"
-            + "gpa DECIMAL(3,2) NOT NULL,"
+            + "gpa DECIMAL(5,2) NOT NULL,"
             + "gpa_scale VARCHAR(5) NOT NULL,"
             + "created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             + "FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)";
